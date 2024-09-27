@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /> //後台運行仍可以取位置 先留著
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/> //連接到已配對的藍芽設備
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/> //信標發送訊息給其他藍芽設備 先留著
+
     <application
         android:label="test"
         android:name="${applicationName}"
