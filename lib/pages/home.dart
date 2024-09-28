@@ -5,7 +5,7 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 2,
       child: Scaffold(
         appBar: AppBar(
           titleSpacing: 0.0,
@@ -13,9 +13,7 @@ class MainPage extends StatelessWidget {
             labelPadding: EdgeInsets.zero,
             tabs: <Widget>[
               Tab(text: "Home"),
-              Tab(text: "Items"),
-              Tab(text: "Activity"),
-              Tab(text: "Issues"),
+              Tab(text: "Others"),
             ],
           ),
           actions: <Widget>[
@@ -28,9 +26,7 @@ class MainPage extends StatelessWidget {
         body: TabBarView(
           children: <Widget>[
             HomePage(),
-            const Text("Items"),
-            const Text("Activity"),
-            const Text("Issues"),
+            const Text("Others"),
           ],
         ),
         drawer: Drawer(
@@ -105,7 +101,7 @@ class HomePage extends StatelessWidget {
           ),
           ListTile(
             dense: true,
-            title: const Text("Items"),
+            title: const Text("ITEMS"),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
           ),

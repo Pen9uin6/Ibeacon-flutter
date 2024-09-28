@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:test/pages/home.dart";
 import "package:test/pages/login.dart";
+import "package:test/pages/beacon_list.dart";
 import "package:test/routes.dart";
 
 void main() => runApp(myApp());
@@ -21,11 +22,11 @@ class myApp extends StatelessWidget {
         switch (settings.name) {
           case GitmeRebornRoutes.root:
             return MaterialPageRoute(
-              builder: (context) => LoginPage(),
+              builder: (context) => MainPage(),
             );
           default:
             return MaterialPageRoute(
-              builder: (context) => LoginPage(),
+              builder: (context) => MainPage(),
             );
         }
       },
