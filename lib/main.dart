@@ -1,12 +1,21 @@
 import "package:flutter/material.dart";
 import "package:test/pages/home.dart";
 import "package:test/pages/login.dart";
-import "package:test/pages/beacon_list.dart";
 import "package:test/routes.dart";
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-void main() => runApp(myApp());
+//void main() => runApp(myApp());
+Future main() async {
+// Initialize FFI
+  sqfliteFfiInit();
+
+  databaseFactory = databaseFactoryFfi;
+  runApp(myApp());
+}
 
 class myApp extends StatelessWidget {
+  const myApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -30,6 +39,7 @@ class myApp extends StatelessWidget {
             );
         }
       },
+      debugShowCheckedModeBanner: false,
     );
   }
 }

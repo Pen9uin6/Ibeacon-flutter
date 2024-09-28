@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:test/DB.dart';
+import 'package:test/db.dart';
 
 class EditPage extends StatefulWidget {
-  const EditPage({super.key, required this.todo, required this.onSave});
+  const EditPage({super.key, required this.beacon, required this.onSave});
 
-  final Todo todo;
+  final Beacon beacon;
   final Function onSave;
 
   @override
@@ -20,14 +20,14 @@ class _EditPageState extends State<EditPage> {
         backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
         content: Center(
           child: Text(
-            '待辦事項不得為空',
+            '不得為空',
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
       ));
     } else {
-      widget.onSave(itemController.text, widget.todo);
+      widget.onSave(itemController.text, widget.beacon);
       Navigator.pop(context);
     }
   }
@@ -35,7 +35,7 @@ class _EditPageState extends State<EditPage> {
   @override
   void initState() {
     super.initState();
-    itemController.text = widget.todo.name;
+    itemController.text = widget.beacon.name;
   }
 
   @override
@@ -48,7 +48,7 @@ class _EditPageState extends State<EditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('add a todo'),
+        title: const Text('add a beacon'),
         actions: [
           IconButton(
             onPressed: onSaveButtonPressed,
@@ -59,11 +59,11 @@ class _EditPageState extends State<EditPage> {
       body: Center(
         child: Container(
           padding: const EdgeInsets.all(30),
-          child: TextField(
+          child: TextFormField(
             controller: itemController,
             obscureText: false,
-            decoration:
-                const InputDecoration(labelText: 'Todo:', hintText: '買牛奶'),
+            decoration: const InputDecoration(
+                labelText: 'Beacon:', hintText: 'Enter a beacon name'),
           ),
         ),
       ),
