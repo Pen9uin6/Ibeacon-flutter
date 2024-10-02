@@ -1,6 +1,6 @@
-# test
+# Ibeacon-flutter
 
-A new Flutter project.
+An APP that use IBeacons to remind you of your item that you forget to bring.
 
 ## Getting Started
 
