@@ -13,6 +13,7 @@ class EditPage extends StatefulWidget {
 
 class _EditPageState extends State<EditPage> {
   final itemController = TextEditingController();
+  bool home = false;
 
   void onSaveButtonPressed() {
     if (itemController.text == '') {
@@ -27,7 +28,7 @@ class _EditPageState extends State<EditPage> {
         ),
       ));
     } else {
-      widget.onSave(itemController.text, widget.beacon);
+      widget.onSave(home ? 1 : 0, itemController.text, widget.beacon);
       Navigator.pop(context);
     }
   }
@@ -36,6 +37,7 @@ class _EditPageState extends State<EditPage> {
   void initState() {
     super.initState();
     itemController.text = widget.beacon.name;
+    home = widget.beacon.home == 1;
   }
 
   @override
@@ -48,7 +50,7 @@ class _EditPageState extends State<EditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('add a beacon'),
+        title: const Text('Add a Beacon'),
         actions: [
           IconButton(
             onPressed: onSaveButtonPressed,
@@ -57,13 +59,32 @@ class _EditPageState extends State<EditPage> {
         ],
       ),
       body: Center(
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(30),
-          child: TextFormField(
-            controller: itemController,
-            obscureText: false,
-            decoration: const InputDecoration(
-                labelText: 'Beacon:', hintText: 'Enter a beacon name'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextFormField(
+                controller: itemController,
+                decoration: const InputDecoration(
+                  labelText: 'Beacon:',
+                  hintText: 'Enter a beacon name',
+                ),
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: home,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        home = value ?? false;
+                      });
+                    },
+                  ),
+                  const Text('Mark as Home'),
+                ],
+              ),
+            ],
           ),
         ),
       ),

@@ -79,11 +79,11 @@ class _BeaconListState extends State<BeaconList> {
   }
 
   // Add Beacon to DB
-  void onAddBeacon(String name, Beacon beacon) async {
+  void onAddBeacon(int home, String name, Beacon beacon) async {
     final newBeacon = Beacon(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: name,
-        done: 0);
+        home: home);
     await BeaconDB.addBeacon(newBeacon);
     getList();
   }
@@ -100,7 +100,7 @@ class _BeaconListState extends State<BeaconList> {
   // Update Checkbox val of Beacon
   void onChangeCheckbox(val, beacon) async {
     final updateBeacon =
-        Beacon(id: beacon.id, name: beacon.name, done: val ? 1 : 0);
+        Beacon(id: beacon.id, name: beacon.name, home: val ? 1 : 0);
     await BeaconDB.updateBeacon(updateBeacon);
     getList();
   }
@@ -110,7 +110,7 @@ class _BeaconListState extends State<BeaconList> {
     final updateBeacon = Beacon(
       id: beacon.id,
       name: name,
-      done: beacon.done,
+      home: beacon.home,
     );
     await BeaconDB.updateBeacon(updateBeacon);
     getList();
@@ -151,40 +151,76 @@ class _BeaconListState extends State<BeaconList> {
 
   @override
   Widget build(BuildContext context) {
+    final homeBeacons = _BeaconsList.where((b) => b.home == 1).toList();
+    final nothomeBeacons = _BeaconsList.where((b) => b.home == 0).toList();
+
     return Scaffold(
-      appBar: AppBar(title: const Text('BeaconList')),
       body: Column(children: <Widget>[
         Expanded(
-            child: ListView(
-          children: _BeaconsList.map((beacon) {
-            return ListTile(
-              leading: Checkbox(
-                value: beacon.done == 1,
-                onChanged: (value) => onChangeCheckbox(value, beacon),
+          child: ListView(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Home',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
-              title: Text(
-                beacon.name,
-                style: TextStyle(
-                    color: beacon.done == 1 //
-                        ? Theme.of(context).colorScheme.primaryContainer
-                        : Theme.of(context).colorScheme.primary,
-                    decoration: beacon.done == 1 //
-                        ? TextDecoration.lineThrough
-                        : null),
+              ...homeBeacons.map((beacon) {
+                return ListTile(
+                  leading: Checkbox(
+                    value: beacon.home == 1,
+                    onChanged: (value) => onChangeCheckbox(value, beacon),
+                  ),
+                  title: Text(
+                    beacon.name,
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        decoration: TextDecoration.lineThrough),
+                  ),
+                  trailing: PopupMenuButton<ExtraAction>(
+                    onSelected: (action) =>
+                        onSelectExtraAction(context, action, beacon),
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                          value: ExtraAction.edit, child: Icon(Icons.edit)),
+                      PopupMenuItem(
+                          value: ExtraAction.delete, child: Icon(Icons.delete))
+                    ],
+                  ),
+                );
+              }).toList(),
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Items',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
-              trailing: PopupMenuButton<ExtraAction>(
-                onSelected: (action) =>
-                    onSelectExtraAction(context, action, beacon),
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                      value: ExtraAction.edit, child: Icon(Icons.edit)),
-                  PopupMenuItem(
-                      value: ExtraAction.delete, child: Icon(Icons.delete))
-                ],
-              ),
-            );
-          }).toList(),
-        )),
+              ...nothomeBeacons.map((beacon) {
+                return ListTile(
+                  leading: Checkbox(
+                    value: beacon.home == 1,
+                    onChanged: (value) => onChangeCheckbox(value, beacon),
+                  ),
+                  title: Text(
+                    beacon.name,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.primary),
+                  ),
+                  trailing: PopupMenuButton<ExtraAction>(
+                    onSelected: (action) =>
+                        onSelectExtraAction(context, action, beacon),
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                          value: ExtraAction.edit, child: Icon(Icons.edit)),
+                      PopupMenuItem(
+                          value: ExtraAction.delete, child: Icon(Icons.delete))
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ),
       ]),
       floatingActionButton: FloatingActionButton(
         onPressed: onAdd,

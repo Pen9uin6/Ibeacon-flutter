@@ -5,15 +5,15 @@ import 'package:sqflite/sqflite.dart';
 class Beacon {
   final String? id;
   final String name;
-  final int? done;
+  final int? home;
 
-  Beacon({this.id, this.name = '', this.done});
+  Beacon({this.id, this.name = '', this.home});
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
-      'done': done,
+      'home': home,
     };
   }
 }
@@ -24,10 +24,10 @@ class BeaconDB {
   // init
   static Future<Database> initDatabase() async {
     database = await openDatabase(
-      join(await getDatabasesPath(), 'Beacon.db'),
+      join(await getDatabasesPath(), 'Beacons.db'),
       onCreate: (db, version) {
         return db.execute(
-            'CREATE TABLE Beacons(id TEXT PRIMARY KEY, name TEXT, done INTEGER)');
+            'CREATE TABLE Beacons(id TEXT PRIMARY KEY, name TEXT, home INTEGER)');
       },
       version: 1,
     );
@@ -61,7 +61,7 @@ class BeaconDB {
       return Beacon(
         id: maps[i]['id'],
         name: maps[i]['name'],
-        done: maps[i]['done'],
+        home: maps[i]['home'],
       );
     });
   }
