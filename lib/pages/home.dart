@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import "edit_beacon.dart";
-import 'package:test/db.dart';
+import 'package:test/database.dart';
 
 // 主頁面
 class MainPage extends StatelessWidget {
@@ -79,11 +79,12 @@ class _BeaconListState extends State<BeaconList> {
   }
 
   // Add Beacon to DB
-  void onAddBeacon(int home, String name, Beacon beacon) async {
+  void onAddBeacon(Beacon beacon) async {
     final newBeacon = Beacon(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: name,
-        home: home);
+        uuid: beacon.uuid,
+        item: beacon.item,
+        home: beacon.home);
     await BeaconDB.addBeacon(newBeacon);
     getList();
   }
@@ -93,23 +94,27 @@ class _BeaconListState extends State<BeaconList> {
     Navigator.push<void>(
         context,
         MaterialPageRoute(
-            builder: (context) =>
-                EditPage(beacon: Beacon(), onSave: onAddBeacon)));
+            builder: (context) =>EditPage(
+                beacon: Beacon(id: '', uuid: '', item: '', home: 0),
+                onSave: onAddBeacon
+            )
+        )
+    );
   }
 
   // Update Checkbox val of Beacon
   void onChangeCheckbox(val, beacon) async {
     final updateBeacon =
-        Beacon(id: beacon.id, name: beacon.name, home: val ? 1 : 0);
+    Beacon(id: beacon.id, item: beacon.name, home: val ? 1 : 0);
     await BeaconDB.updateBeacon(updateBeacon);
     getList();
   }
 
   // Update Beacon
-  void onEditBeacon(name, beacon) async {
+  void onEditBeacon(item, beacon) async {
     final updateBeacon = Beacon(
       id: beacon.id,
-      name: name,
+      item: item,
       home: beacon.home,
     );
     await BeaconDB.updateBeacon(updateBeacon);
@@ -172,7 +177,7 @@ class _BeaconListState extends State<BeaconList> {
                     onChanged: (value) => onChangeCheckbox(value, beacon),
                   ),
                   title: Text(
-                    beacon.name,
+                    beacon.item,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.primaryContainer,
                         decoration: TextDecoration.lineThrough),
@@ -202,7 +207,7 @@ class _BeaconListState extends State<BeaconList> {
                     onChanged: (value) => onChangeCheckbox(value, beacon),
                   ),
                   title: Text(
-                    beacon.name,
+                    beacon.item,
                     style:
                         TextStyle(color: Theme.of(context).colorScheme.primary),
                   ),
