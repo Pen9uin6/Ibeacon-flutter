@@ -85,7 +85,7 @@ class _BeaconListState extends State<BeaconList> {
         uuid: beacon.uuid,
         item: beacon.item,
         home: beacon.home);
-    await BeaconDB.addBeacon(newBeacon);
+    await BeaconDB.insert(newBeacon);
     getList();
   }
 
@@ -94,19 +94,16 @@ class _BeaconListState extends State<BeaconList> {
     Navigator.push<void>(
         context,
         MaterialPageRoute(
-            builder: (context) =>EditPage(
+            builder: (context) => EditPage(
                 beacon: Beacon(id: '', uuid: '', item: '', home: 0),
-                onSave: onAddBeacon
-            )
-        )
-    );
+                onSave: onAddBeacon)));
   }
 
   // Update Checkbox val of Beacon
   void onChangeCheckbox(val, beacon) async {
     final updateBeacon =
-    Beacon(id: beacon.id, item: beacon.name, home: val ? 1 : 0);
-    await BeaconDB.updateBeacon(updateBeacon);
+        Beacon(id: beacon.id, item: beacon.name, home: val ? 1 : 0);
+    await BeaconDB.update(updateBeacon);
     getList();
   }
 
@@ -117,13 +114,13 @@ class _BeaconListState extends State<BeaconList> {
       item: item,
       home: beacon.home,
     );
-    await BeaconDB.updateBeacon(updateBeacon);
+    await BeaconDB.update(updateBeacon);
     getList();
   }
 
   // Delete Beacon
   void onDeleteBeacon(beacon) async {
-    await BeaconDB.deleteBeacon(beacon.id);
+    await BeaconDB.delete(beacon.id);
     getList();
   }
 

@@ -36,7 +36,7 @@ class _EditPageState extends State<EditPage> {
         home: home ? 1 : 0,
       );
 
-      widget.onSave(newBeacon);  // 傳入 Beacon 物件
+      widget.onSave(newBeacon); // 傳入 Beacon 物件
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -57,7 +57,6 @@ class _EditPageState extends State<EditPage> {
       );
     }
   }
-
 
   @override
   void initState() {

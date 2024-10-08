@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path_provider/path_provider.dart';
 
 class Beacon {
   final String? id; // 此存取id
@@ -21,44 +23,64 @@ class Beacon {
 }
 
 class BeaconDB {
-  static Database? database;
+  static Database? _database;
+  static final _databaseName = "Beacons1.db";
+  static final _databaseVersion = 1;
+  static final table = 'Beacons';
 
-  // init
-  static Future<Database> initDatabase() async {
-    database = await openDatabase(
-      join(await getDatabasesPath(), 'Beacons.db'),
-      onCreate: (db, version) {
-        return db.execute(
-            'CREATE TABLE Beacons(id TEXT PRIMARY KEY, uuid TEXT, item TEXT, home INTEGER)');
-      },
-      version: 1,
-    );
-    print('database initialized!');
-    return database!;
+  BeaconDB._privateConstructor();
+  static final BeaconDB instance = BeaconDB._privateConstructor();
+
+  Future<Database?> get database async {
+    if (_database != null) return _database;
+    _database = await _initDatabase();
+    return _database;
   }
 
-  // connect
-  static Future<Database> getDBConnect() async {
-    if (database != null) {
-      return database!;
-    }
-    return await initDatabase();
+  _initDatabase() async {
+    Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    String path = join(documentsDirectory.path, _databaseName);
+    return await openDatabase(path,
+        version: _databaseVersion, onCreate: _onCreate);
   }
 
-  // Create
-  static Future<void> addBeacon(Beacon beacon) async {
-    final Database db = await getDBConnect();
-    await db.insert(
-      'Beacons',
-      beacon.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+  Future _onCreate(Database db, int version) async {
+    await db.execute(
+        'CREATE TABLE Beacons(id TEXT PRIMARY KEY, uuid TEXT, item TEXT, home INTEGER)');
   }
 
+  static Future<int> insert(Beacon beacon) async {
+    Database? db = await instance.database;
+    return await db!.insert(table, beacon.toMap());
+  }
+
+  static Future<List<Map<String, dynamic>>> queryAllRows() async {
+    Database? db = await instance.database;
+    return await db!.query(table);
+  }
+
+  static Future<int?> queryRowCount() async {
+    Database? db = await instance.database;
+    return Sqflite.firstIntValue(
+        await db!.rawQuery('SELECT COUNT(*) FROM $table'));
+  }
+
+  static Future<int> update(Beacon beacon) async {
+    Database? db = await instance.database;
+    return await db!
+        .update(table, beacon.toMap(), where: 'id = ?', whereArgs: [beacon.id]);
+  }
+
+  static Future<int> delete(String id) async {
+    Database? db = await instance.database;
+    return await db!.delete(table, where: 'id = ?', whereArgs: [id]);
+  }
+
+  //////////////////////////////////////////////////////
   // Read all
   static Future<List<Beacon>> getBeacons() async {
-    final Database db = await getDBConnect();
-    final List<Map<String, dynamic>> maps = await db.query('Beacons');
+    Database? db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db!.query('Beacons');
     return List.generate(maps.length, (i) {
       return Beacon(
         id: maps[i]['id'],
@@ -67,26 +89,5 @@ class BeaconDB {
         home: maps[i]['home'],
       );
     });
-  }
-
-  // Update
-  static Future<void> updateBeacon(Beacon beacon) async {
-    final Database db = await getDBConnect();
-    await db.update(
-      'Beacons',
-      beacon.toMap(),
-      where: 'id = ?',
-      whereArgs: [beacon.id],
-    );
-  }
-
-  // Delete
-  static Future<void> deleteBeacon(String id) async {
-    final Database db = await getDBConnect();
-    await db.delete(
-      'Beacons',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
   }
 }

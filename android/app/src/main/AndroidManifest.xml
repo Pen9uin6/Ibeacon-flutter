@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/> //連接到已配對的藍芽設備
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/> //信標發送訊息給其他藍芽設備 先留著
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
     <application
         android:label="test"
