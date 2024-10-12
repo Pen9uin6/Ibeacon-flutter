@@ -8,16 +8,16 @@ class Beacon {
   final String? id; // 此存取id
   final String? uuid; // iBeacon UUID
   final String item; // 與此UUID綁定的物品名稱
-  final int? home; // 是否是門口那顆
+  final int? door; // 是否是門口那顆
 
-  Beacon({this.id, this.uuid, this.item = '', this.home});
+  Beacon({this.id, this.uuid, this.item = '', this.door});
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'uuid': uuid,
       'item': item,
-      'home': home,
+      'home': door,
     };
   }
 }
@@ -86,7 +86,7 @@ class BeaconDB {
         id: maps[i]['id'],
         uuid: maps[i]['uuid'],
         item: maps[i]['item'],
-        home: maps[i]['home'],
+        door: maps[i]['home'],
       );
     });
   }

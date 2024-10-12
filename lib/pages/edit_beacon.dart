@@ -14,7 +14,7 @@ class EditPage extends StatefulWidget {
 class _EditPageState extends State<EditPage> {
   final itemController = TextEditingController();
   final uuidController = TextEditingController();
-  bool home = false;
+  bool door = false;
 
   void onSaveButtonPressed() {
     if (itemController.text == '' || uuidController.text == '') {
@@ -28,15 +28,12 @@ class _EditPageState extends State<EditPage> {
         ),
       ));
     } else {
-      // 建立 Beacon 物件並存入資料庫
-      final newBeacon = Beacon(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        uuid: uuidController.text,
-        item: itemController.text,
-        home: home ? 1 : 0,
-      );
+      widget.onSave(door ? 1 : 0, itemController.text, uuidController.text,
+          widget.beacon);
 
-      widget.onSave(newBeacon); // 傳入 Beacon 物件
+      debugPrint(
+          '${door.toString()}, ${itemController.text}, ${uuidController.text}, ${widget.beacon}');
+
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -63,7 +60,7 @@ class _EditPageState extends State<EditPage> {
     super.initState();
     itemController.text = widget.beacon.item;
     uuidController.text = widget.beacon.uuid ?? '';
-    home = widget.beacon.home == 1;
+    door = widget.beacon.door == 1;
   }
 
   @override
@@ -110,10 +107,10 @@ class _EditPageState extends State<EditPage> {
               Row(
                 children: [
                   Checkbox(
-                    value: home,
+                    value: door,
                     onChanged: (bool? value) {
                       setState(() {
-                        home = value ?? false;
+                        door = value ?? false;
                       });
                     },
                   ),

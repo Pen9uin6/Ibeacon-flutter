@@ -79,12 +79,12 @@ class _BeaconListState extends State<BeaconList> {
   }
 
   // Add Beacon to DB
-  void onAddBeacon(Beacon beacon) async {
+  void onAddBeacon(int door, String item, String uuid, Beacon beacon) async {
     final newBeacon = Beacon(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        uuid: beacon.uuid,
-        item: beacon.item,
-        home: beacon.home);
+        uuid: uuid,
+        item: item,
+        door: door);
     await BeaconDB.insert(newBeacon);
     getList();
   }
@@ -95,24 +95,25 @@ class _BeaconListState extends State<BeaconList> {
         context,
         MaterialPageRoute(
             builder: (context) => EditPage(
-                beacon: Beacon(id: '', uuid: '', item: '', home: 0),
+                beacon: Beacon(id: '', uuid: '', item: '', door: 0),
                 onSave: onAddBeacon)));
   }
 
   // Update Checkbox val of Beacon
   void onChangeCheckbox(val, beacon) async {
     final updateBeacon =
-        Beacon(id: beacon.id, item: beacon.name, home: val ? 1 : 0);
+        Beacon(id: beacon.id, item: beacon.name, door: val ? 1 : 0);
     await BeaconDB.update(updateBeacon);
     getList();
   }
 
   // Update Beacon
-  void onEditBeacon(item, beacon) async {
+  void onEditBeacon(int door, String item, String uuid, beacon) async {
     final updateBeacon = Beacon(
       id: beacon.id,
+      uuid: uuid,
       item: item,
-      home: beacon.home,
+      door: door,
     );
     await BeaconDB.update(updateBeacon);
     getList();
@@ -153,8 +154,8 @@ class _BeaconListState extends State<BeaconList> {
 
   @override
   Widget build(BuildContext context) {
-    final homeBeacons = _BeaconsList.where((b) => b.home == 1).toList();
-    final nothomeBeacons = _BeaconsList.where((b) => b.home == 0).toList();
+    final homeBeacons = _BeaconsList.where((b) => b.door == 1).toList();
+    final nothomeBeacons = _BeaconsList.where((b) => b.door == 0).toList();
 
     return Scaffold(
       body: Column(children: <Widget>[
@@ -163,14 +164,14 @@ class _BeaconListState extends State<BeaconList> {
             children: [
               const Padding(
                 padding: EdgeInsets.all(8.0),
-                child: Text('Home',
+                child: Text('Door',
                     style:
                         TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               ...homeBeacons.map((beacon) {
                 return ListTile(
                   leading: Checkbox(
-                    value: beacon.home == 1,
+                    value: beacon.door == 1,
                     onChanged: (value) => onChangeCheckbox(value, beacon),
                   ),
                   title: Text(
@@ -200,7 +201,7 @@ class _BeaconListState extends State<BeaconList> {
               ...nothomeBeacons.map((beacon) {
                 return ListTile(
                   leading: Checkbox(
-                    value: beacon.home == 1,
+                    value: beacon.door == 1,
                     onChanged: (value) => onChangeCheckbox(value, beacon),
                   ),
                   title: Text(

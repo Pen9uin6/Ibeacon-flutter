@@ -4,8 +4,10 @@ import 'package:flutter_beacon/flutter_beacon.dart';
 import 'package:test/database.dart' as db;
 
 class ScanService {
-  final StreamController<Map<String, dynamic>> _beaconStreamController = StreamController<Map<String, dynamic>>.broadcast();
-  Stream<Map<String, dynamic>> get beaconStream => _beaconStreamController.stream;
+  final StreamController<Map<String, dynamic>> _beaconStreamController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get beaconStream =>
+      _beaconStreamController.stream;
   List<int> rssiList = [];
   List<db.Beacon> registeredBeacons = [];
 
@@ -27,7 +29,7 @@ class ScanService {
         final distance = calculateDistanceFromSmoothedRssi();
 
         final db.Beacon? registeredBeacon = registeredBeacons.firstWhere(
-              (regBeacon) => regBeacon.uuid == beaconId,
+          (regBeacon) => regBeacon.uuid == beaconId,
           orElse: () => db.Beacon(),
         );
 
@@ -37,7 +39,7 @@ class ScanService {
             'itemName': registeredBeacon.item,
             'uuid': beaconId,
             'distance': distance,
-            'home': registeredBeacon.home,
+            'home': registeredBeacon.door,
           });
         }
       }
@@ -55,7 +57,8 @@ class ScanService {
     if (rssiList.isEmpty) return 0;
     List<int> sortedRssi = List.from(rssiList)..sort();
     int discardCount = (sortedRssi.length * 0.1).round();
-    List<int> filteredRssi = sortedRssi.sublist(discardCount, sortedRssi.length - discardCount);
+    List<int> filteredRssi =
+        sortedRssi.sublist(discardCount, sortedRssi.length - discardCount);
     return filteredRssi.reduce((a, b) => a + b) / filteredRssi.length;
   }
 
