@@ -1,70 +1,70 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter_beacon/flutter_beacon.dart';
-import 'package:test/database.dart' as db;
 
 class ScanService {
-  final StreamController<Map<String, dynamic>> _beaconStreamController =
-      StreamController<Map<String, dynamic>>.broadcast();
-  Stream<Map<String, dynamic>> get beaconStream =>
+  final StreamController<List<Map<String, dynamic>>> _beaconStreamController =
+  StreamController<List<Map<String, dynamic>>>.broadcast();
+  Stream<List<Map<String, dynamic>>> get beaconStream =>
       _beaconStreamController.stream;
-  List<int> rssiList = [];
-  List<db.Beacon> registeredBeacons = [];
 
+  List<double> rssiList = []; // 改為 List<double>
+
+  // 初始化並開始掃描 Beacon
   Future<void> startScanning() async {
     print("初始化掃描...");
-    await flutterBeacon.initializeAndCheckScanning;
+    try {
+      await flutterBeacon.initializeAndCheckScanning;
+    } catch (e) {
+      print("初始化失敗: $e");
+      return;
+    }
+
+    // 設置掃描區域
     final regions = <Region>[Region(identifier: 'com.beacon')];
 
-    registeredBeacons = await db.BeaconDB.getBeacons();
-    print("註冊 Beacons: $registeredBeacons");
-
-    flutterBeacon.ranging(regions).listen((result) async {
-      print("掃描結果: $result");
+    // 開始掃描並監聽掃描結果
+    flutterBeacon.ranging(regions).listen((result) {
+      List<Map<String, dynamic>> scannedBeacons = [];
       for (var beacon in result.beacons) {
         final beaconId = beacon.proximityUUID;
-        final rssi = beacon.rssi ?? 0;
+        final rssi = beacon.rssi?.toDouble() ?? 0; // 轉換為 double 類型
 
-        addRssiValue(rssi);
-        final distance = calculateDistanceFromSmoothedRssi();
+        if (rssi != 0) {
+          addRssiValue(rssi); // 添加到 RSSI 列表中
+          final distance = calculateDistanceFromSmoothedRssi();
 
-        final db.Beacon? registeredBeacon = registeredBeacons.firstWhere(
-          (regBeacon) => regBeacon.uuid == beaconId,
-          orElse: () => db.Beacon(),
-        );
-
-        if (registeredBeacon != null && registeredBeacon.uuid != null) {
-          print("找到已註冊的 Beacon: ${registeredBeacon.item}, 距離: $distance");
-          _beaconStreamController.add({
-            'itemName': registeredBeacon.item,
+          scannedBeacons.add({
             'uuid': beaconId,
             'distance': distance,
-            'home': registeredBeacon.door,
+            'rssi': rssi,
           });
         }
       }
+      _beaconStreamController.add(scannedBeacons); // 傳送掃描到的 Beacons
     });
   }
 
-  void addRssiValue(int rssi) {
+  // 增加 RSSI 值並計算距離
+  void addRssiValue(double rssi) {
     if (rssi != 0) {
       rssiList.add(rssi);
-      if (rssiList.length > 5) rssiList.removeAt(0);
+      if (rssiList.length > 5) rssiList.removeAt(0); // 保持最近的 5 個 RSSI 值
     }
   }
 
   double getSmoothedRssi() {
     if (rssiList.isEmpty) return 0;
-    List<int> sortedRssi = List.from(rssiList)..sort();
-    int discardCount = (sortedRssi.length * 0.1).round();
-    List<int> filteredRssi =
-        sortedRssi.sublist(discardCount, sortedRssi.length - discardCount);
+    List<double> sortedRssi = List<double>.from(rssiList)..sort(); // 使用 List<double>
+    int discardCount = (sortedRssi.length * 0.1).round(); // 丟棄 10% 的數據以消除異常值
+    List<double> filteredRssi =
+    sortedRssi.sublist(discardCount, sortedRssi.length - discardCount);
     return filteredRssi.reduce((a, b) => a + b) / filteredRssi.length;
   }
 
   double calculateDistanceFromSmoothedRssi() {
     double smoothedRssi = getSmoothedRssi();
-    const int txPower = -59;
+    const int txPower = -59; // 發射功率
     return pow(10, (txPower - smoothedRssi) / (10 * 4)).toDouble();
   }
 

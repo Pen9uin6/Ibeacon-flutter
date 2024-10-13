@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import "edit_beacon.dart";
 import 'package:test/database.dart';
+import 'package:test/scan.dart';
 
 // 主頁面
 class MainPage extends StatelessWidget {
@@ -69,13 +70,42 @@ class BeaconList extends StatefulWidget {
 
 class _BeaconListState extends State<BeaconList> {
   List<Beacon> _BeaconsList = [];
+  List<Map<String, dynamic>> _scannedBeacons = []; // 存掃描到的已配對 Beacon
+  final ScanService _scanService = ScanService(); // 初始化
+
+  @override
+  void initState() {
+    super.initState();
+    getList();
+    _startBeaconScanning(); // 開掃beacon
+  }
 
   // Read All Todos & rebuild UI
   void getList() async {
     final list = await BeaconDB.getBeacons();
     setState(() {
       _BeaconsList = list;
+      print("從資料庫獲取的 Beacons: $_BeaconsList");
     });
+  }
+
+  // Start scanning the Beacon
+  void _startBeaconScanning() {
+    _scanService.startScanning();
+    _scanService.beaconStream.listen((scannedBeacons) {
+      setState(() {
+        _scannedBeacons = scannedBeacons; // 更新掃描到的 Beacons
+        print("掃描到的 Beacons: $_scannedBeacons");
+      });
+    });
+  }
+
+  // Search the Beacon according UUID and update the distance
+  Beacon? _findBeaconByUUID(String uuid) {
+    return _BeaconsList.firstWhere(
+          (beacon) => beacon.uuid == uuid,
+      orElse: () => Beacon(id: '', uuid: '', item: '', door: 0), // 回傳一個空的 Beacon
+    );
   }
 
   // Add Beacon to DB
@@ -102,7 +132,7 @@ class _BeaconListState extends State<BeaconList> {
   // Update Checkbox val of Beacon
   void onChangeCheckbox(val, beacon) async {
     final updateBeacon =
-        Beacon(id: beacon.id, item: beacon.name, door: val ? 1 : 0);
+    Beacon(id: beacon.id, item: beacon.name, door: val ? 1 : 0);
     await BeaconDB.update(updateBeacon);
     getList();
   }
@@ -145,17 +175,14 @@ class _BeaconListState extends State<BeaconList> {
     }
   }
 
-  // State control
-  @override
-  void initState() {
-    super.initState();
-    getList();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final homeBeacons = _BeaconsList.where((b) => b.door == 1).toList();
-    final nothomeBeacons = _BeaconsList.where((b) => b.door == 0).toList();
+    final homeBeacons = _scannedBeacons
+        .where((b) => _findBeaconByUUID(b['uuid'])?.door == 1)
+        .toList();
+    final nothomeBeacons = _scannedBeacons
+        .where((b) => _findBeaconByUUID(b['uuid'])?.door == 0)
+        .toList();
 
     return Scaffold(
       body: Column(children: <Widget>[
@@ -166,23 +193,22 @@ class _BeaconListState extends State<BeaconList> {
                 padding: EdgeInsets.all(8.0),
                 child: Text('Door',
                     style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
+              // 顯示 Door 區域的 Beacons
               ...homeBeacons.map((beacon) {
+                final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
                 return ListTile(
-                  leading: Checkbox(
-                    value: beacon.door == 1,
-                    onChanged: (value) => onChangeCheckbox(value, beacon),
-                  ),
-                  title: Text(
-                    beacon.item,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        decoration: TextDecoration.lineThrough),
-                  ),
+                  // leading: Checkbox(
+                  //   value: dbBeacon?.door == 1,
+                  //   onChanged: (value) => onChangeCheckbox(value, dbBeacon),
+                  // ),
+                  title: Text('${dbBeacon?.item}'),
+                  subtitle: Text(
+                      '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
                   trailing: PopupMenuButton<ExtraAction>(
                     onSelected: (action) =>
-                        onSelectExtraAction(context, action, beacon),
+                        onSelectExtraAction(context, action, dbBeacon),
                     itemBuilder: (context) => const [
                       PopupMenuItem(
                           value: ExtraAction.edit, child: Icon(Icons.edit)),
@@ -196,22 +222,22 @@ class _BeaconListState extends State<BeaconList> {
                 padding: EdgeInsets.all(8.0),
                 child: Text('Items',
                     style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
+              // 顯示 Items 區域的 Beacons
               ...nothomeBeacons.map((beacon) {
+                final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
                 return ListTile(
-                  leading: Checkbox(
-                    value: beacon.door == 1,
-                    onChanged: (value) => onChangeCheckbox(value, beacon),
-                  ),
-                  title: Text(
-                    beacon.item,
-                    style:
-                        TextStyle(color: Theme.of(context).colorScheme.primary),
-                  ),
+                  // leading: Checkbox(
+                  //   value: dbBeacon?.door == 1,
+                  //   onChanged: (value) => onChangeCheckbox(value, dbBeacon),
+                  // ),
+                  title: Text('${dbBeacon?.item}'),
+                  subtitle: Text(
+                      '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
                   trailing: PopupMenuButton<ExtraAction>(
                     onSelected: (action) =>
-                        onSelectExtraAction(context, action, beacon),
+                        onSelectExtraAction(context, action, dbBeacon),
                     itemBuilder: (context) => const [
                       PopupMenuItem(
                           value: ExtraAction.edit, child: Icon(Icons.edit)),
