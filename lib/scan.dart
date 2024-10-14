@@ -8,7 +8,7 @@ class ScanService {
   Stream<List<Map<String, dynamic>>> get beaconStream =>
       _beaconStreamController.stream;
 
-  List<double> rssiList = []; // 改為 List<double>
+  Map<String, List<double>> beaconRssiMap = {};
 
   // 初始化並開始掃描 Beacon
   Future<void> startScanning() async {
@@ -28,44 +28,78 @@ class ScanService {
       List<Map<String, dynamic>> scannedBeacons = [];
       for (var beacon in result.beacons) {
         final beaconId = beacon.proximityUUID;
-        final rssi = beacon.rssi?.toDouble() ?? 0; // 轉換為 double 類型
+        final rssi = beacon.rssi?.toDouble() ?? 0;
 
         if (rssi != 0) {
-          addRssiValue(rssi); // 添加到 RSSI 列表中
-          final distance = calculateDistanceFromSmoothedRssi();
+          addRssiValue(beaconId, rssi); // 將 RSSI 添加到對應 Beacon 的 RSSI 列表中
+
+          // 濾波器處理RSSI
+          double refinedRssi = Average(beaconId); // 計算平均值
+          final distance = calculateDistanceFromRssi(refinedRssi);
 
           scannedBeacons.add({
             'uuid': beaconId,
             'distance': distance,
-            'rssi': rssi,
+            'rssi': refinedRssi,
           });
         }
       }
-      _beaconStreamController.add(scannedBeacons); // 傳送掃描到的 Beacons
+      _beaconStreamController.add(scannedBeacons);
     });
   }
 
-  // 增加 RSSI 值並計算距離
-  void addRssiValue(double rssi) {
+  // 增加 RSSI 值
+  void addRssiValue(String beaconId, double rssi) {
     if (rssi != 0) {
-      rssiList.add(rssi);
-      if (rssiList.length > 5) rssiList.removeAt(0); // 保持最近的 5 個 RSSI 值
+      if (!beaconRssiMap.containsKey(beaconId)) {
+        beaconRssiMap[beaconId] = [];
+      }
+      beaconRssiMap[beaconId]!.add(rssi);
+      if (beaconRssiMap[beaconId]!.length > 10) {
+        beaconRssiMap[beaconId]!.removeAt(0); // 存最近10個RSSI
+      }
     }
   }
 
-  double getSmoothedRssi() {
-    if (rssiList.isEmpty) return 0;
-    List<double> sortedRssi = List<double>.from(rssiList)..sort(); // 使用 List<double>
-    int discardCount = (sortedRssi.length * 0.1).round(); // 丟棄 10% 的數據以消除異常值
-    List<double> filteredRssi =
-    sortedRssi.sublist(discardCount, sortedRssi.length - discardCount);
-    return filteredRssi.reduce((a, b) => a + b) / filteredRssi.length;
+  // 平均 RSSI
+  double Average(String beaconId) {
+    if (beaconRssiMap[beaconId] == null || beaconRssiMap[beaconId]!.isEmpty) {
+      return 0;
+    }
+    List<double> rssiList = beaconRssiMap[beaconId]!;
+    return rssiList.reduce((a, b) => a + b) / rssiList.length;
   }
 
-  double calculateDistanceFromSmoothedRssi() {
-    double smoothedRssi = getSmoothedRssi();
+  // 卡爾曼濾波器參數
+  double _kalmanRssi = 0;
+  double _kalmanP = 1;
+  double _kalmanR = 0.05; // 噪聲協方差 (越大表系統對變化越靈敏 0.01 ~ 1)
+  double _kalmanQ = 0.05; // 測量協方差 (越小代表對測量的信用度越高 0.1 ~ 10)
+
+  // 卡爾曼濾波器
+  double KalmanFilter(double rssi) {
+    _kalmanP = _kalmanP + _kalmanQ;
+    double K = _kalmanP / (_kalmanP + _kalmanR);
+    _kalmanRssi = _kalmanRssi + K * (rssi - _kalmanRssi);
+    _kalmanP = (1 - K) * _kalmanP;
+    return _kalmanRssi;
+  }
+
+  // 指數加權移動平均濾波器參數
+  double emaRssi = 0.0;
+  double alpha = 0.2; // 平滑因子 0~1
+
+  // 指數加權移動平均濾波器
+  double exponentialMovingAverageFilter(double rssi) {
+    emaRssi = alpha * rssi + (1 - alpha) * emaRssi;
+    return emaRssi;
+  }
+
+  // 根據 RSSI 計算距離
+  double calculateDistanceFromRssi(double rssi) {
     const int txPower = -59; // 發射功率
-    return pow(10, (txPower - smoothedRssi) / (10 * 4)).toDouble();
+    double n = 3.5; // 環境損耗因子
+    return pow(10, (txPower - rssi) / (10 * n)).toDouble();
   }
 
   void dispose() {
