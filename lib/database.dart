@@ -90,4 +90,42 @@ class BeaconDB {
       );
     });
   }
+
+  // 根據UUID查找 Beacon
+  static Future<Beacon?> getBeaconByUUID(String uuid) async{
+    Database? db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'Beacons',
+      where: 'uuid = ?',
+      whereArgs: [uuid],
+    );
+    if (maps.isNotEmpty) {
+      return Beacon(
+        id: maps.first['id'],
+        uuid: maps.first['uuid'],
+        item: maps.first['item'],
+        door: maps.first['home'],
+      );
+    }
+    return null;
+  }
+
+  // 根據物品名稱查找 Beacon
+  static Future<Beacon?> getBeaconByName(String item) async {
+    Database? db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'Beacons',
+      where: 'item = ?',
+      whereArgs: [item],
+    );
+    if (maps.isNotEmpty) {
+      return Beacon(
+        id: maps.first['id'],
+        uuid: maps.first['uuid'],
+        item: maps.first['item'],
+        door: maps.first['home'],
+      );
+    }
+    return null;
+  }
 }

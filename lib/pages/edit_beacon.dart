@@ -16,7 +16,7 @@ class _EditPageState extends State<EditPage> {
   final uuidController = TextEditingController();
   bool door = false;
 
-  void onSaveButtonPressed() {
+  void onSaveButtonPressed() async {
     if (itemController.text == '' || uuidController.text == '') {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         backgroundColor: Colors.red,
@@ -28,30 +28,45 @@ class _EditPageState extends State<EditPage> {
         ),
       ));
     } else {
-      widget.onSave(door ? 1 : 0, itemController.text, uuidController.text,
-          widget.beacon);
+      // 檢查資料庫是否已有相同的 UUID 或物品名稱
+      final existingBeaconByUUID = await BeaconDB.getBeaconByUUID(uuidController.text);
+      final existingBeaconByName = await BeaconDB.getBeaconByName(itemController.text);
 
-      debugPrint(
-          '${door.toString()}, ${itemController.text}, ${uuidController.text}, ${widget.beacon}');
+      if (existingBeaconByUUID != null || existingBeaconByName != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: Colors.orange,
+          content: Center(
+            child: Text(
+              '相同的 UUID 或物品名稱已存在於資料庫中',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ));
+      } else {
+        widget.onSave(door ? 1 : 0, itemController.text, uuidController.text, widget.beacon);
 
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('儲存成功'),
-            content: const Text('物品名稱和 UUID 已成功儲存。'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // 關閉對話框
-                  Navigator.of(context).pop(); // 返回主畫面
-                },
-                child: const Text('確認'),
-              ),
-            ],
-          );
-        },
-      );
+        debugPrint(
+            '${door.toString()}, ${itemController.text}, ${uuidController.text}, ${widget.beacon}');
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('儲存成功'),
+              content: const Text('物品名稱和 UUID 已成功儲存。'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // 關閉對話框
+                    Navigator.of(context).pop(); // 返回主畫面
+                  },
+                  child: const Text('確認'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     }
   }
 
