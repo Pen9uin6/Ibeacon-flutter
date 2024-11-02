@@ -3,10 +3,13 @@ import 'dart:math';
 import 'package:flutter_beacon/flutter_beacon.dart';
 
 class ScanService {
-  final StreamController<List<Map<String, dynamic>>> _beaconStreamController =
-  StreamController<List<Map<String, dynamic>>>.broadcast();
-  Stream<List<Map<String, dynamic>>> get beaconStream =>
-      _beaconStreamController.stream;
+  late final StreamController<List<Map<String, dynamic>>> _beaconStreamController;
+
+  ScanService() {
+    _beaconStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
+  }
+
+  Stream<List<Map<String, dynamic>>> get beaconStream => _beaconStreamController.stream;
 
   //Map<String, List<double>> beaconRssiMap = {};
   Map<String, double> emaRssiMap = {};
@@ -29,7 +32,7 @@ class ScanService {
       List<Map<String, dynamic>> scannedBeacons = [];
       for (var beacon in result.beacons) {
         final beaconId = beacon.proximityUUID;
-        final rssi = beacon.rssi?.toDouble() ?? 0;
+        final rssi = beacon.rssi.toDouble() ?? 0;
 
         if (rssi != 0) {
           // addRssiValue(beaconId, rssi); // 將 RSSI 添加到對應 Beacon 的 RSSI 列表中
@@ -45,7 +48,7 @@ class ScanService {
           });
         }
       }
-      _beaconStreamController.add(scannedBeacons);
+      _beaconStreamController?.add(scannedBeacons);
     });
   }
 
@@ -73,7 +76,7 @@ class ScanService {
 
   // 指數加權移動平均濾波器參數
   double emaRssi = 0.0;
-  double alpha = 0.5; // 平滑因子 0~1
+  double alpha = 0.2; // 平滑因子 0~1
 
   double exponentialMovingAverageFilter(String beaconId, double rssi) {
     if (!emaRssiMap.containsKey(beaconId)) {
@@ -95,6 +98,6 @@ class ScanService {
   }
 
   void dispose() {
-    _beaconStreamController.close();
+    _beaconStreamController?.close();
   }
 }

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import "edit_beacon.dart";
 import 'package:test/database.dart';
+import 'package:test/background.dart';
 import 'package:test/scan.dart';
-import 'package:flutter_background/flutter_background.dart';
-import 'package:test/background_execute.dart';
-
+import 'package:test/requirement_state_controller.dart';
+import 'package:get/get.dart';
 
 // 主頁面
 class MainPage extends StatelessWidget {
-  const MainPage({super.key});
+  MainPage({super.key});
+  final BackgroundExecute backgroundExecute = Get.put(BackgroundExecute());
 
   @override
   Widget build(BuildContext context) {
@@ -27,17 +27,10 @@ class MainPage extends StatelessWidget {
           ),
           actions: <Widget>[
             IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () {},
-            ),
-            IconButton(
               icon: const Icon(Icons.play_arrow), // 啟用後台掃描的按鈕
               onPressed: () async {
-                BackgroundExecute backgroundExecute = BackgroundExecute();
                 bool success = await backgroundExecute.initializeBackground();
                 if (success) {
-                  SharedPreferences prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool('is_background_scanning', true);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('後台掃描已啟用')),
                   );
@@ -49,17 +42,14 @@ class MainPage extends StatelessWidget {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.stop),
+              icon: const Icon(Icons.stop), // 停止後台掃描的按鈕
               onPressed: () async {
-                BackgroundExecute backgroundExecute = BackgroundExecute();
-                await backgroundExecute.stopBackgroundScanning();
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('is_background_scanning', false);
+                await backgroundExecute.stopBackgroundExecute();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('後台掃描已停止')),
                 );
               },
-            )
+            ),
           ],
         ),
         body: TabBarView(
@@ -68,76 +58,92 @@ class MainPage extends StatelessWidget {
             const Text("Others"),
           ],
         ),
-        drawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: <Widget>[
-              const DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Colors.blueGrey,
-                ),
-                child: Text("User Name"),
-              ),
-              ListTile(
-                title: const Text("Sign out"),
-                onTap: () {
-                  Navigator.pushReplacementNamed(context, "/login");
-                },
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
+
 
 // define ExtraActions (Update or Delete)
 enum ExtraAction { edit, delete }
 
 class BeaconList extends StatefulWidget {
   const BeaconList({super.key});
-
   @override
   _BeaconListState createState() => _BeaconListState();
 }
 
-class _BeaconListState extends State<BeaconList>with WidgetsBindingObserver {
+class _BeaconListState extends State<BeaconList> with WidgetsBindingObserver {
   List<Beacon> _BeaconsList = [];
   List<Map<String, dynamic>> _scannedBeacons = []; // 存掃描到的已配對 Beacon
   final ScanService _scanService = ScanService(); // 初始化
-  final BackgroundExecute _backgroundExecute = BackgroundExecute(); // 用於後台掃描
+  final controller = Get.put(RequirementStateController());
+  final BackgroundExecute backgroundExecute = Get.find<BackgroundExecute>();
+  bool _isScanning = false;
 
   @override
   void initState() {
     super.initState();
-    getList();
     WidgetsBinding.instance.addObserver(this); // 監聽應用狀態
-    _startBeaconScanning(); // 開掃beacon
-  }
+    getList();
+    _startBeaconScanning(); // 開始掃描
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
-    if (state == AppLifecycleState.resumed) {
-      // 應用回到前景，啟動前台掃描
-      _stopBackgroundScanning(); // 停止後台掃描
-      _startBeaconScanning(); // 啟動一般掃描
-    } else if (state == AppLifecycleState.paused) {
-      // 應用進入背景，啟動後台掃描
-      _stopBeaconScanning(); // 停止一般掃描
-      bool success = await _backgroundExecute.initializeBackground();
-      if (!success) {
-        print('後台掃描啟動失敗');
-      }
-    }
+    // 監聽 RequirementStateController 狀態變化
+    controller.bluetoothState.listen((state) {
+      _checkAllRequirements();
+    });
+    controller.authorizationStatus.listen((status) {
+      _checkAllRequirements();
+    });
+    controller.locationService.listen((enabled) {
+      _checkAllRequirements();
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this); // 移除狀態監聽
-    _stopBeaconScanning(); // 停止前台掃描
-    _backgroundExecute.stopBackgroundScanning(); // 停止後台掃描
+    _stopBeaconScanning(); // 停止掃描
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      // 應用進入背景
+      // do nothing
+    } else if (state == AppLifecycleState.resumed) {
+      // 應用回到前景，停止前景服務並繼續正常掃描
+      _onWillPop(); // 問是否下次關閉是否啟動背景掃描
+      print("應用回到前景，停止背景服務");
+      backgroundExecute.stopBackgroundExecute();
+      if (!_isScanning) {
+        _startBeaconScanning(); // 確保掃描正常進行
+      }
+    }
+  }
+
+  Future<bool> _onWillPop() async {
+    bool enableBackground = await _showBackgroundEnableDialog();
+    if (enableBackground) {
+      await backgroundExecute.initializeBackground(); // 啟動後台掃描
+    } else {
+      backgroundExecute.stopBackgroundExecute(); // 停止後台掃描
+    }
+    return true; // 允許退出應用
+  }
+
+  // 檢查所有要求的狀態
+  void _checkAllRequirements() async {
+    if (controller.bluetoothEnabled &&
+        controller.authorizationStatusOk &&
+        controller.locationServiceEnabled) {
+      print('所有需求均滿足，開始掃描');
+      _startBeaconScanning();
+    } else {
+      print('需求未滿足，暫停掃描');
+      _stopBeaconScanning();
+    }
   }
 
   // Read All Todos & rebuild UI
@@ -151,28 +157,29 @@ class _BeaconListState extends State<BeaconList>with WidgetsBindingObserver {
 
   // Start scanning the Beacon
   void _startBeaconScanning() {
-    _scanService.startScanning();
-    _scanService.beaconStream.listen((scannedBeacons) {
-      setState(() {
-        _scannedBeacons = scannedBeacons.where((scannedBeacon) {
-          return _BeaconsList.any((beacon) => beacon.uuid == scannedBeacon['uuid']);
-        }).toList();
-        print("掃描到的 Beacons: $_scannedBeacons");
+    if (!_isScanning) {
+      _scanService.startScanning();
+      _scanService.beaconStream.listen((scannedBeacons) {
+        setState(() {
+          _scannedBeacons = scannedBeacons.where((scannedBeacon) {
+            return _BeaconsList.any((beacon) =>
+            beacon.uuid == scannedBeacon['uuid']);
+          }).toList();
+          print("掃描到的 Beacons: $_scannedBeacons");
+        });
       });
-    });
+      _isScanning = true;
+    }
   }
 
   // Stop scanning the Beacon
   void _stopBeaconScanning() {
-    _scanService.dispose();
-  }
-
-  // Stop background scanning the Beacon
-  Future<void> _stopBackgroundScanning() async {
-    if (await FlutterBackground.isBackgroundExecutionEnabled) {
-      await _backgroundExecute.stopBackgroundScanning();
+    if (_isScanning) {
+      _scanService.dispose();
+      _isScanning = false;
     }
   }
+
   // Search the Beacon according UUID and update the distance
   Beacon? _findBeaconByUUID(String uuid) {
     return _BeaconsList.firstWhere(
@@ -190,6 +197,34 @@ class _BeaconListState extends State<BeaconList>with WidgetsBindingObserver {
         door: door);
     await BeaconDB.insert(newBeacon);
     getList();
+  }
+
+  // Show dialog to ask user if they want to enable background scanning
+  Future<bool> _showBackgroundEnableDialog() async {
+    return await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("啟用後台掃描"),
+          content: Text("是否希望下次退出app後繼續進行掃描？"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: Text("否"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: Text("是"),
+            ),
+          ],
+        );
+      },
+    ) ??
+        false;
   }
 
   // Press Add Button
@@ -242,6 +277,7 @@ class _BeaconListState extends State<BeaconList>with WidgetsBindingObserver {
 
       case ExtraAction.delete:
         onDeleteBeacon(beacon);
+        break;
 
       default:
         print('error!!');
@@ -272,10 +308,6 @@ class _BeaconListState extends State<BeaconList>with WidgetsBindingObserver {
               ...homeBeacons.map((beacon) {
                 final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
                 return ListTile(
-                  // leading: Checkbox(
-                  //   value: dbBeacon?.door == 1,
-                  //   onChanged: (value) => onChangeCheckbox(value, dbBeacon),
-                  // ),
                   title: Text('${dbBeacon?.item}'),
                   subtitle: Text(
                       '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
@@ -301,10 +333,6 @@ class _BeaconListState extends State<BeaconList>with WidgetsBindingObserver {
               ...nothomeBeacons.map((beacon) {
                 final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
                 return ListTile(
-                  // leading: Checkbox(
-                  //   value: dbBeacon?.door == 1,
-                  //   onChanged: (value) => onChangeCheckbox(value, dbBeacon),
-                  // ),
                   title: Text('${dbBeacon?.item}'),
                   subtitle: Text(
                       '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
