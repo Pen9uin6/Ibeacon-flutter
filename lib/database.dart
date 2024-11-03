@@ -20,6 +20,11 @@ class Beacon {
       'home': door,
     };
   }
+
+  @override
+  String toString() {
+    return 'Beacon(id: $id, uuid: $uuid, item: $item, door: $door)';
+  }
 }
 
 class BeaconDB {

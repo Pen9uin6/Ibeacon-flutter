@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter_beacon/flutter_beacon.dart';
+import 'package:test/missing_event.dart';
 
 class ScanService {
   late final StreamController<List<Map<String, dynamic>>> _beaconStreamController;
+  final MissingEventService _missingEventService;
 
-  ScanService() {
+  ScanService(): _missingEventService = MissingEventService() {
     _beaconStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
   }
 
@@ -46,6 +48,12 @@ class ScanService {
             'distance': distance,
             'rssi': refinedRssi,
           });
+
+          _missingEventService.checkIfItemIsMissing({
+            'uuid': beaconId,
+            'distance': distance,
+          });
+
         }
       }
       _beaconStreamController?.add(scannedBeacons);
