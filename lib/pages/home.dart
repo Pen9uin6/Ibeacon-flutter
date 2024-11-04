@@ -22,7 +22,7 @@ class MainPage extends StatelessWidget {
             labelPadding: EdgeInsets.zero,
             tabs: <Widget>[
               Tab(text: "Home"),
-              Tab(text: "Others"),
+              Tab(text: "Manage"),
             ],
           ),
           actions: <Widget>[
@@ -54,26 +54,41 @@ class MainPage extends StatelessWidget {
         ),
         body: TabBarView(
           children: <Widget>[
-            BeaconList(),
-            const Text("Others"),
+            HomePage(),
+            ManagePage(),
           ],
+        ),
+        drawer: Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              const DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey,
+                ),
+                child: Text("User Name"),
+              ),
+              ListTile(
+                title: const Text("Sign out"),
+                onTap: () {
+                  Navigator.pushReplacementNamed(context, "/login");
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-
-// define ExtraActions (Update or Delete)
-enum ExtraAction { edit, delete }
-
-class BeaconList extends StatefulWidget {
-  const BeaconList({super.key});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
   @override
-  _BeaconListState createState() => _BeaconListState();
+  _HomePageState createState() => _HomePageState();
 }
 
-class _BeaconListState extends State<BeaconList> with WidgetsBindingObserver {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   List<Beacon> _BeaconsList = [];
   List<Map<String, dynamic>> _scannedBeacons = []; // 存掃描到的已配對 Beacon
   final ScanService _scanService = ScanService(); // 初始化
@@ -114,23 +129,12 @@ class _BeaconListState extends State<BeaconList> with WidgetsBindingObserver {
       // do nothing
     } else if (state == AppLifecycleState.resumed) {
       // 應用回到前景，停止前景服務並繼續正常掃描
-      _onWillPop(); // 問是否下次關閉是否啟動背景掃描
       print("應用回到前景，停止背景服務");
       backgroundExecute.stopBackgroundExecute();
       if (!_isScanning) {
         _startBeaconScanning(); // 確保掃描正常進行
       }
     }
-  }
-
-  Future<bool> _onWillPop() async {
-    bool enableBackground = await _showBackgroundEnableDialog();
-    if (enableBackground) {
-      await backgroundExecute.initializeBackground(); // 啟動後台掃描
-    } else {
-      backgroundExecute.stopBackgroundExecute(); // 停止後台掃描
-    }
-    return true; // 允許退出應用
   }
 
   // 檢查所有要求的狀態
@@ -199,34 +203,6 @@ class _BeaconListState extends State<BeaconList> with WidgetsBindingObserver {
     getList();
   }
 
-  // Show dialog to ask user if they want to enable background scanning
-  Future<bool> _showBackgroundEnableDialog() async {
-    return await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("啟用後台掃描"),
-          content: Text("是否希望下次退出app後繼續進行掃描？"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-              child: Text("否"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-              child: Text("是"),
-            ),
-          ],
-        );
-      },
-    ) ??
-        false;
-  }
-
   // Press Add Button
   void onAdd() {
     Navigator.push<void>(
@@ -243,45 +219,6 @@ class _BeaconListState extends State<BeaconList> with WidgetsBindingObserver {
     Beacon(id: beacon.id, item: beacon.name, door: val ? 1 : 0);
     await BeaconDB.update(updateBeacon);
     getList();
-  }
-
-  // Update Beacon
-  void onEditBeacon(int door, String item, String uuid, beacon) async {
-    final updateBeacon = Beacon(
-      id: beacon.id,
-      uuid: uuid,
-      item: item,
-      door: door,
-    );
-    await BeaconDB.update(updateBeacon);
-    getList();
-  }
-
-  // Delete Beacon
-  void onDeleteBeacon(beacon) async {
-    await BeaconDB.delete(beacon.id);
-    getList();
-  }
-
-  // Select from ExtraActions (Update or Delete)
-  void onSelectExtraAction(context, action, beacon) {
-    switch (action) {
-      case ExtraAction.edit:
-        Navigator.push<void>(
-            context,
-            MaterialPageRoute(
-                builder: (context) =>
-                    EditPage(beacon: beacon, onSave: onEditBeacon),
-                fullscreenDialog: true));
-        break;
-
-      case ExtraAction.delete:
-        onDeleteBeacon(beacon);
-        break;
-
-      default:
-        print('error!!');
-    }
   }
 
   @override
@@ -311,16 +248,6 @@ class _BeaconListState extends State<BeaconList> with WidgetsBindingObserver {
                   title: Text('${dbBeacon?.item}'),
                   subtitle: Text(
                       '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
-                  trailing: PopupMenuButton<ExtraAction>(
-                    onSelected: (action) =>
-                        onSelectExtraAction(context, action, dbBeacon),
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
-                          value: ExtraAction.edit, child: Icon(Icons.edit)),
-                      PopupMenuItem(
-                          value: ExtraAction.delete, child: Icon(Icons.delete))
-                    ],
-                  ),
                 );
               }).toList(),
               const Padding(
@@ -336,22 +263,217 @@ class _BeaconListState extends State<BeaconList> with WidgetsBindingObserver {
                   title: Text('${dbBeacon?.item}'),
                   subtitle: Text(
                       '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
-                  trailing: PopupMenuButton<ExtraAction>(
-                    onSelected: (action) =>
-                        onSelectExtraAction(context, action, dbBeacon),
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
-                          value: ExtraAction.edit, child: Icon(Icons.edit)),
-                      PopupMenuItem(
-                          value: ExtraAction.delete, child: Icon(Icons.delete))
-                    ],
-                  ),
                 );
               }).toList(),
             ],
           ),
         ),
       ]),
+      floatingActionButton: FloatingActionButton(
+        onPressed: onAdd,
+        child: const Icon(Icons.add),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+}
+
+// define ExtraActions (Update or Delete)
+enum ExtraAction { edit, delete, toggleDoor }
+
+class ManagePage extends StatefulWidget {
+  ManagePage({super.key});
+
+  @override
+  _ManagePageState createState() => _ManagePageState();
+}
+
+class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
+  List<Beacon> _BeaconsList = [];
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    getList();
+  }
+
+  // Read All Todos & rebuild UI
+  void getList() async {
+    final list = await BeaconDB.getBeacons();
+    setState(() {
+      _BeaconsList = list;
+    });
+  }
+  // Rename the Beacon
+  void _renameBeacon(Beacon beacon) async {
+    TextEditingController renameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Rename the Beacon"),
+          content: TextField(
+            controller: renameController,
+            decoration: const InputDecoration(
+              labelText: "Enter new name",
+              hintText: "New Beacon Name",
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (renameController.text.isNotEmpty) {
+                  Beacon updatedBeacon = beacon.copyWith(item: renameController.text);
+                  _updateBeacon(updatedBeacon);
+                }
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _toggleDoorStatus(Beacon beacon) async {
+    Beacon updatedBeacon = beacon.copyWith(door: beacon.door == 1 ? 0 : 1);
+    _updateBeacon(updatedBeacon);
+  }
+
+  void _updateBeacon(Beacon beacon) async {
+    await BeaconDB.update(beacon);
+    getList();
+  }
+
+  void onSelectExtraAction(BuildContext context, ExtraAction action, Beacon beacon) {
+    switch (action) {
+      case ExtraAction.edit:
+        _renameBeacon(beacon); // 彈出視窗以重新命名
+        break;
+
+      case ExtraAction.toggleDoor:
+        _toggleDoorStatus(beacon); // 切換 door 狀態
+        break;
+
+      case ExtraAction.delete:
+        onDeleteBeacon(beacon); // 刪除 Beacon
+        break;
+
+      default:
+        print('Unexpected action!');
+    }
+  }
+
+  // Add Beacon to DB
+  void onAddBeacon(int door, String item, String uuid, Beacon beacon) async {
+    final newBeacon = Beacon(
+        id: DateTime
+            .now()
+            .millisecondsSinceEpoch
+            .toString(),
+        uuid: uuid,
+        item: item,
+        door: door);
+    await BeaconDB.insert(newBeacon);
+    getList();
+  }
+
+  // Press Add Button
+  void onAdd() {
+    Navigator.push<void>(
+        context,
+        MaterialPageRoute(
+            builder: (context) =>
+                EditPage(
+                    beacon: Beacon(id: '', uuid: '', item: '', door: 0),
+                    onSave: onAddBeacon)));
+  }
+
+  // Update Checkbox val of Beacon
+  void onChangeCheckbox(val, beacon) async {
+    final updateBeacon =
+    Beacon(id: beacon.id, item: beacon.name, door: val ? 1 : 0);
+    await BeaconDB.update(updateBeacon);
+    getList();
+  }
+
+  // Update Beacon
+  void onEditBeacon(int door, String item, String uuid, beacon) async {
+    final updateBeacon = Beacon(
+      id: beacon.id,
+      uuid: uuid,
+      item: item,
+      door: door,
+    );
+    await BeaconDB.update(updateBeacon);
+    getList();
+  }
+
+  // Delete Beacon
+  void onDeleteBeacon(beacon) async {
+    await BeaconDB.delete(beacon.id);
+    getList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Manage Registered Beacons'),
+      ),
+      body: ListView(
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text(
+              'All Beacons',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ..._BeaconsList.map((beacon) {
+            return ListTile(
+              title: Text(beacon.item),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('UUID: ${beacon.uuid}'),
+                  Text('Door: ${beacon.door == 1 ? "Yes" : "No"}'),
+                ],
+              ),
+              trailing: PopupMenuButton<ExtraAction>(
+                onSelected: (action) => onSelectExtraAction(context, action, beacon),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: ExtraAction.edit,
+                    child: Text('Rename the Beacon'),
+                  ),
+                  const PopupMenuItem(
+                    value: ExtraAction.toggleDoor,
+                    child: Text('Toggle Door Status'),
+                  ),
+                  const PopupMenuItem(
+                    value: ExtraAction.delete,
+                    child: Text('Delete'),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: onAdd,
         child: const Icon(Icons.add),

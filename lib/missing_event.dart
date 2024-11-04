@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 
 class MissingEventService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
-  final double missingThreshold = 1;
+  final double missingThreshold = 1.5;
   final Map<String, int> _missingCounts = {};
 
   MissingEventService() {
@@ -31,7 +31,7 @@ class MissingEventService {
         _sendMissingNotification(beacon);
       }
     } else {
-      print('Beacon $beaconId 距離恢復正常, 重置計數');
+      print('Beacon $beaconId 距離正常');
       _missingCounts[beaconId] = 0;
     }
   }

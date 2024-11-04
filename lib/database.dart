@@ -21,6 +21,20 @@ class Beacon {
     };
   }
 
+  Beacon copyWith({
+    String? id,
+    String? uuid,
+    String? item,
+    int? door,
+  }) {
+    return Beacon(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      item: item ?? this.item,
+      door: door ?? this.door,
+    );
+  }
+
   @override
   String toString() {
     return 'Beacon(id: $id, uuid: $uuid, item: $item, door: $door)';
