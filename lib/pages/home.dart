@@ -5,11 +5,129 @@ import 'package:test/background.dart';
 import 'package:test/scan.dart';
 import 'package:test/requirement_state_controller.dart';
 import 'package:get/get.dart';
+import 'dart:async';
 
 // 主頁面
-class MainPage extends StatelessWidget {
+class MainPage extends StatefulWidget {
   MainPage({super.key});
+
+  @override
+  _MainPageState createState() => _MainPageState();
+}
+
+class _MainPageState extends State<MainPage>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final BackgroundExecute backgroundExecute = Get.put(BackgroundExecute());
+  final ScanService scanService = Get.put(ScanService(), permanent: true);
+  final RequirementStateController controller =
+  Get.put(RequirementStateController());
+  late TabController _tabController;
+  StreamSubscription<List<Map<String, dynamic>>>? _scanSubscription;
+
+  List<Beacon> _BeaconsList = [];
+  List<Map<String, dynamic>> _scannedBeacons = [];
+  bool _isScanning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    getList();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabChange);
+    WidgetsBinding.instance.addObserver(this); // 監聽應用狀態
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // 移除狀態監聽
+    _stopBeaconScanning(); // 停止掃描
+    super.dispose();
+  }
+
+  // 監聽 Tab 切換
+  void _handleTabChange() {
+    if (_tabController.index == 0) {
+      getList(); // 當切換到 Home 時重新加載 Beacon 列表
+    }
+  }
+
+  // 讀取所有 Beacons 並重建 UI
+  void getList() async {
+    final list = await BeaconDB.getBeacons();
+    setState(() {
+      _BeaconsList = list;
+      print("從資料庫獲取的 Beacons: $_BeaconsList");
+    });
+  }
+
+  // 開始掃描 Beacon
+  void _startBeaconScanning() async {
+    if (!_isScanning) {
+      await scanService.startScanning(); // 開始掃描
+      _scanSubscription =
+          scanService.beaconStream.listen((scannedBeacons) {
+            setState(() {
+              _scannedBeacons = scannedBeacons.where((scannedBeacon) {
+                return _BeaconsList.any(
+                        (beacon) => beacon.uuid == scannedBeacon['uuid']);
+              }).toList();
+              print("掃描到的 Beacons: $_scannedBeacons");
+            });
+          });
+      _isScanning = true;
+      bool success = await backgroundExecute.initializeBackground();
+      setState(() {}); // 更新掃描按鈕的狀態
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(success ? '掃描已啟用並支援後台運行' : '掃描啟動失敗')),
+      );
+    }
+  }
+
+  // 停止掃描 Beacon
+  void _stopBeaconScanning() async {
+    if (_isScanning) {
+      _scanSubscription?.cancel(); // 取消掃描訂閱
+      await backgroundExecute.stopBackgroundExecute();
+      _isScanning = false;
+      setState(() {}); // 更新掃描按鈕的狀態
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('掃描已停止')),
+      );
+    }
+  }
+
+  // 添加 Beacon 到資料庫
+  void onAddBeacon(int door, String item, String uuid, Beacon beacon) async {
+    final newBeacon = Beacon(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      uuid: uuid,
+      item: item,
+      door: door,
+    );
+    await BeaconDB.insert(newBeacon);
+    getList();
+  }
+
+  // 按下添加按鈕
+  void onAdd() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditPage(
+          beacon: Beacon(id: '', uuid: '', item: '', door: 0),
+          onSave: onAddBeacon,
+        ),
+      ),
+    );
+  }
+
+  // 根據 UUID 搜尋 Beacon 並更新距離
+  Beacon? _findBeaconByUUID(String uuid) {
+    return _BeaconsList.firstWhere(
+          (beacon) => beacon.uuid == uuid,
+      orElse: () => Beacon(id: '', uuid: '', item: '', door: 0), // 回傳一個空的 Beacon
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,35 +145,17 @@ class MainPage extends StatelessWidget {
           ),
           actions: <Widget>[
             IconButton(
-              icon: const Icon(Icons.play_arrow), // 啟用後台掃描的按鈕
-              onPressed: () async {
-                bool success = await backgroundExecute.initializeBackground();
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('後台掃描已啟用')),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('後台掃描啟動失敗')),
-                  );
-                }
+              icon: Icon(_isScanning ? Icons.stop : Icons.play_arrow), // 啟用後台掃描的按鈕
+              onPressed: () {
+                _isScanning ? _stopBeaconScanning() : _startBeaconScanning();
               },
-            ),
-            IconButton(
-              icon: const Icon(Icons.stop), // 停止後台掃描的按鈕
-              onPressed: () async {
-                await backgroundExecute.stopBackgroundExecute();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('後台掃描已停止')),
-                );
-              },
-            ),
+            )
           ],
         ),
         body: TabBarView(
           children: <Widget>[
-            HomePage(),
-            ManagePage(),
+            HomePage(_scannedBeacons, _findBeaconByUUID),
+            ManagePage(getList),
           ],
         ),
         drawer: Drawer(
@@ -77,158 +177,27 @@ class MainPage extends StatelessWidget {
             ],
           ),
         ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: onAdd,
+          child: const Icon(Icons.add),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-  @override
-  _HomePageState createState() => _HomePageState();
-}
 
-class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
-  List<Beacon> _BeaconsList = [];
-  List<Map<String, dynamic>> _scannedBeacons = []; // 存掃描到的已配對 Beacon
-  final ScanService _scanService = ScanService(); // 初始化
-  final controller = Get.put(RequirementStateController());
-  final BackgroundExecute backgroundExecute = Get.find<BackgroundExecute>();
-  bool _isScanning = false;
+class HomePage extends StatelessWidget {
+  final List<Map<String, dynamic>> _scannedBeacons;
+  final Beacon? Function(String uuid) _findBeaconByUUID;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this); // 監聽應用狀態
-    getList();
-    _startBeaconScanning(); // 開始掃描
-
-    // 監聽 RequirementStateController 狀態變化
-    controller.bluetoothState.listen((state) {
-      _checkAllRequirements();
-    });
-    controller.authorizationStatus.listen((status) {
-      _checkAllRequirements();
-    });
-    controller.locationService.listen((enabled) {
-      _checkAllRequirements();
-    });
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this); // 移除狀態監聽
-    _stopBeaconScanning(); // 停止掃描
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      // 應用進入背景
-      // do nothing
-    } else if (state == AppLifecycleState.resumed) {
-      // 應用回到前景，停止前景服務並繼續正常掃描
-      print("應用回到前景，停止背景服務");
-      backgroundExecute.stopBackgroundExecute();
-      if (!_isScanning) {
-        _startBeaconScanning(); // 確保掃描正常進行
-      }
-    }
-  }
-
-  // 檢查所有要求的狀態
-  void _checkAllRequirements() async {
-    if (controller.bluetoothEnabled &&
-        controller.authorizationStatusOk &&
-        controller.locationServiceEnabled) {
-      print('所有需求均滿足，開始掃描');
-      _startBeaconScanning();
-    } else {
-      print('需求未滿足，暫停掃描');
-      _stopBeaconScanning();
-    }
-  }
-
-  // Read All Todos & rebuild UI
-  void getList() async {
-    final list = await BeaconDB.getBeacons();
-    setState(() {
-      _BeaconsList = list;
-      print("從資料庫獲取的 Beacons: $_BeaconsList");
-    });
-  }
-
-  // Start scanning the Beacon
-  void _startBeaconScanning() {
-    if (!_isScanning) {
-      _scanService.startScanning();
-      _scanService.beaconStream.listen((scannedBeacons) {
-        setState(() {
-          _scannedBeacons = scannedBeacons.where((scannedBeacon) {
-            return _BeaconsList.any((beacon) =>
-            beacon.uuid == scannedBeacon['uuid']);
-          }).toList();
-          print("掃描到的 Beacons: $_scannedBeacons");
-        });
-      });
-      _isScanning = true;
-    }
-  }
-
-  // Stop scanning the Beacon
-  void _stopBeaconScanning() {
-    if (_isScanning) {
-      _scanService.dispose();
-      _isScanning = false;
-    }
-  }
-
-  // Search the Beacon according UUID and update the distance
-  Beacon? _findBeaconByUUID(String uuid) {
-    return _BeaconsList.firstWhere(
-          (beacon) => beacon.uuid == uuid,
-      orElse: () => Beacon(id: '', uuid: '', item: '', door: 0), // 回傳一個空的 Beacon
-    );
-  }
-
-  // Add Beacon to DB
-  void onAddBeacon(int door, String item, String uuid, Beacon beacon) async {
-    final newBeacon = Beacon(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        uuid: uuid,
-        item: item,
-        door: door);
-    await BeaconDB.insert(newBeacon);
-    getList();
-  }
-
-  // Press Add Button
-  void onAdd() {
-    Navigator.push<void>(
-        context,
-        MaterialPageRoute(
-            builder: (context) => EditPage(
-                beacon: Beacon(id: '', uuid: '', item: '', door: 0),
-                onSave: onAddBeacon)));
-  }
-
-  // Update Checkbox val of Beacon
-  void onChangeCheckbox(val, beacon) async {
-    final updateBeacon =
-    Beacon(id: beacon.id, item: beacon.name, door: val ? 1 : 0);
-    await BeaconDB.update(updateBeacon);
-    getList();
-  }
+  HomePage(this._scannedBeacons, this._findBeaconByUUID, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    final homeBeacons = _scannedBeacons
-        .where((b) => _findBeaconByUUID(b['uuid'])?.door == 1)
-        .toList();
-    final nothomeBeacons = _scannedBeacons
-        .where((b) => _findBeaconByUUID(b['uuid'])?.door == 0)
-        .toList();
+    final homeBeacons = _scannedBeacons.where((b) => _findBeaconByUUID(b['uuid'])?.door == 1).toList();
+    final nothomeBeacons = _scannedBeacons.where((b) => _findBeaconByUUID(b['uuid'])?.door == 0).toList();
 
     return Scaffold(
       body: Column(children: <Widget>[
@@ -238,42 +207,33 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               const Padding(
                 padding: EdgeInsets.all(8.0),
                 child: Text('Door',
-                    style:
-                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               // 顯示 Door 區域的 Beacons
               ...homeBeacons.map((beacon) {
                 final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
                 return ListTile(
                   title: Text('${dbBeacon?.item}'),
-                  subtitle: Text(
-                      '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
+                  subtitle: Text('距離: ${beacon['distance'].toStringAsFixed(2)} m'),
                 );
               }).toList(),
               const Padding(
                 padding: EdgeInsets.all(8.0),
                 child: Text('Items',
-                    style:
-                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               // 顯示 Items 區域的 Beacons
               ...nothomeBeacons.map((beacon) {
                 final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
                 return ListTile(
                   title: Text('${dbBeacon?.item}'),
-                  subtitle: Text(
-                      '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
+                  subtitle: Text('距離: ${beacon['distance'].toStringAsFixed(2)} m'),
                 );
               }).toList(),
             ],
           ),
         ),
       ]),
-      floatingActionButton: FloatingActionButton(
-        onPressed: onAdd,
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
@@ -282,7 +242,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 enum ExtraAction { edit, delete, toggleDoor }
 
 class ManagePage extends StatefulWidget {
-  ManagePage({super.key});
+  final VoidCallback refreshHome;
+  ManagePage(this.refreshHome, {super.key});
 
   @override
   _ManagePageState createState() => _ManagePageState();
@@ -290,6 +251,7 @@ class ManagePage extends StatefulWidget {
 
 class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
   List<Beacon> _BeaconsList = [];
+  final ScanService scanService = Get.find<ScanService>();
 
   @override
   void dispose() {
@@ -308,6 +270,7 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
     setState(() {
       _BeaconsList = list;
     });
+    widget.refreshHome(); // 更新 Home 頁面數據
   }
   // Rename the Beacon
   void _renameBeacon(Beacon beacon) async {

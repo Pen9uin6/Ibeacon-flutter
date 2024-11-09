@@ -6,6 +6,7 @@ import 'package:test/missing_event.dart';
 class ScanService {
   late final StreamController<List<Map<String, dynamic>>> _beaconStreamController;
   final MissingEventService _missingEventService;
+  StreamSubscription? _scanSubscription;
 
   ScanService(): _missingEventService = MissingEventService() {
     _beaconStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
@@ -28,9 +29,10 @@ class ScanService {
 
     // 設置掃描區域
     final regions = <Region>[Region(identifier: 'com.beacon')];
+    await _scanSubscription?.cancel();
 
     // 開始掃描並監聽掃描結果
-    flutterBeacon.ranging(regions).listen((result) {
+    _scanSubscription = flutterBeacon.ranging(regions).listen((result) {
       List<Map<String, dynamic>> scannedBeacons = [];
       for (var beacon in result.beacons) {
         final beaconId = beacon.proximityUUID;
@@ -60,27 +62,14 @@ class ScanService {
     });
   }
 
-  // // 增加 RSSI 值
-  // void addRssiValue(String beaconId, double rssi) {
-  //   if (rssi != 0) {
-  //     if (!beaconRssiMap.containsKey(beaconId)) {
-  //       beaconRssiMap[beaconId] = [];
-  //     }
-  //     beaconRssiMap[beaconId]!.add(rssi);
-  //     if (beaconRssiMap[beaconId]!.length > 10) {
-  //       beaconRssiMap[beaconId]!.removeAt(0); // 存最近10個RSSI
-  //     }
-  //   }
-  // }
-
-  // // 平均 RSSI
-  // double Average(String beaconId) {
-  //   if (beaconRssiMap[beaconId] == null || beaconRssiMap[beaconId]!.isEmpty) {
-  //     return 0;
-  //   }
-  //   List<double> rssiList = beaconRssiMap[beaconId]!;
-  //   return rssiList.reduce((a, b) => a + b) / rssiList.length;
-  // }
+  // 停止掃描
+  Future<void> stopScanning() async {
+    await _scanSubscription?.cancel(); // 正確取消訂閱
+    _scanSubscription = null; // 重置訂閱
+    if (!_beaconStreamController.isClosed) {
+      _beaconStreamController.close(); // 關閉流控制器
+    }
+  }
 
   // 指數加權移動平均濾波器參數
   double emaRssi = 0.0;
@@ -106,6 +95,7 @@ class ScanService {
   }
 
   void dispose() {
-    _beaconStreamController?.close();
+    stopScanning();
+    _beaconStreamController.close();
   }
 }

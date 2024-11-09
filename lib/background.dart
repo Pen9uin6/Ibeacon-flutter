@@ -12,6 +12,10 @@ class BackgroundExecute {
     bool success = await FlutterBackground.initialize(androidConfig: androidConfig);
     if (success) {
       await FlutterBackground.enableBackgroundExecution();
+      print("後台執行已啟動");
+    }
+    else{
+      print("後台執行初始化失敗");
     }
     return success;
   }
@@ -20,6 +24,10 @@ class BackgroundExecute {
   Future<void> stopBackgroundExecute() async {
     if (await FlutterBackground.isBackgroundExecutionEnabled) {
       await FlutterBackground.disableBackgroundExecution();
+      print("後台執行已停止");
+    }
+    else {
+      print("後台執行未啟動，無需停止");
     }
   }
 }

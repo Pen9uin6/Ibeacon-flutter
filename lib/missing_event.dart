@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 
 class MissingEventService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
-  final double missingThreshold = 1.5;
+  final double missingThreshold = 3;
   final Map<String, int> _missingCounts = {};
 
   MissingEventService() {
