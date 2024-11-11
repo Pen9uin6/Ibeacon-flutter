@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter_beacon/flutter_beacon.dart';
 import 'package:test/missing_event.dart';
+import 'package:test/database.dart' as db;
 
 class ScanService {
   late final StreamController<List<Map<String, dynamic>>> _beaconStreamController;
@@ -17,9 +18,54 @@ class ScanService {
   //Map<String, List<double>> beaconRssiMap = {};
   Map<String, double> emaRssiMap = {};
 
-  // 初始化並開始掃描 Beacon
+  // 掃描已註冊beacon
+  Future<void>scanRegisteredBeacons(List<db.Beacon> registeredBeacons) async {
+    print("初始化掃描已註冊的 Beacon......");
+    try {
+      await flutterBeacon.initializeAndCheckScanning;
+    } catch (e) {
+      print("初始化失敗: $e");
+      return;
+    }
+
+    // 設置掃描區域
+    final regions = <Region>[Region(identifier: 'com.beacon')];
+    await _scanSubscription?.cancel();
+
+    // 開始掃描並監聽掃描結果
+    _scanSubscription = flutterBeacon.ranging(regions).listen((result) {
+      List<Map<String, dynamic>> scannedBeacons = [];
+      for (var beacon in result.beacons) {
+        final beaconId = beacon.proximityUUID;
+        final rssi = beacon.rssi.toDouble() ?? 0;
+
+        if (rssi != 0) {
+          // 濾波器處理RSSI
+          double refinedRssi = exponentialMovingAverageFilter(beaconId, rssi); //EMA計算
+          final distance = calculateDistanceFromRssi(refinedRssi);
+
+          // 檢查該 Beacon 是否在已註冊的 Beacon 中
+          if (registeredBeacons.any((b) => b.uuid == beaconId)) {
+            scannedBeacons.add({
+              'uuid': beaconId,
+              'distance': distance,
+              'rssi': refinedRssi,
+            });
+            _missingEventService.checkIfItemIsMissing({
+              'uuid': beaconId,
+              'distance': distance,
+              'item': registeredBeacons.firstWhere((b) => b.uuid == beaconId).item,
+            });
+          }
+        }
+      }
+      _beaconStreamController?.add(scannedBeacons);
+    });
+  }
+
+  // 掃描全部beacon
   Future<void> startScanning() async {
-    print("初始化掃描...");
+    print("初始化掃描所有 Beacon...");
     try {
       await flutterBeacon.initializeAndCheckScanning;
     } catch (e) {
@@ -50,12 +96,6 @@ class ScanService {
             'distance': distance,
             'rssi': refinedRssi,
           });
-
-          _missingEventService.checkIfItemIsMissing({
-            'uuid': beaconId,
-            'distance': distance,
-          });
-
         }
       }
       _beaconStreamController?.add(scannedBeacons);

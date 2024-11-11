@@ -62,42 +62,37 @@ class _MainPageState extends State<MainPage>
 
   // 開始掃描 Beacon
   void _startBeaconScanning() async {
-    if (!_isScanning) {
-      await scanService.startScanning(); // 開始掃描
-      _scanSubscription =
-          scanService.beaconStream.listen((scannedBeacons) {
-            setState(() {
-              _scannedBeacons = scannedBeacons.where((scannedBeacon) {
-                return _BeaconsList.any(
-                        (beacon) => beacon.uuid == scannedBeacon['uuid']);
-              }).toList();
-              print("掃描到的 Beacons: $_scannedBeacons");
-            });
-          });
-      _isScanning = true;
-      bool success = await backgroundExecute.initializeBackground();
-      setState(() {}); // 更新掃描按鈕的狀態
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(success ? '掃描已啟用並支援後台運行' : '掃描啟動失敗')),
-      );
-    }
+    _isScanning = true;
+    bool success = await backgroundExecute.initializeBackground();
+    setState(() {}); // 更新掃描按鈕的狀態
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(success ? '掃描已啟用並支援後台運行' : '掃描啟動失敗')),
+    );
+    await scanService.scanRegisteredBeacons(_BeaconsList); // 開始掃描
+    _scanSubscription = scanService.beaconStream.listen((scannedBeacons) {
+      setState(() {
+        _scannedBeacons = scannedBeacons;
+        print("掃描到的已註冊 Beacons: $_scannedBeacons");
+      });
+    });
   }
 
   // 停止掃描 Beacon
   void _stopBeaconScanning() async {
-    if (_isScanning) {
-      _scanSubscription?.cancel(); // 取消掃描訂閱
-      await backgroundExecute.stopBackgroundExecute();
-      _isScanning = false;
-      setState(() {}); // 更新掃描按鈕的狀態
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('掃描已停止')),
-      );
-    }
+    _isScanning = false;
+    setState(() {
+      _scannedBeacons.clear();
+    }); // 更新掃描按鈕的狀態
+    _scanSubscription?.cancel(); // 取消掃描訂閱
+    await backgroundExecute.stopBackgroundExecute();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('掃描已停止')),
+    );
   }
 
   // 添加 Beacon 到資料庫
-  void onAddBeacon(int door, String item, String uuid, Beacon beacon) async {
+  void onAddBeacon (int door, String item, String uuid, Beacon beacon) async {
     final newBeacon = Beacon(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       uuid: uuid,
@@ -108,9 +103,9 @@ class _MainPageState extends State<MainPage>
     getList();
   }
 
-  // 按下添加按鈕
-  void onAdd() {
-    Navigator.push<void>(
+// 按下添加按鈕
+  void onAdd() async {
+    await Navigator.push<void>(
       context,
       MaterialPageRoute(
         builder: (context) => EditPage(
@@ -119,6 +114,7 @@ class _MainPageState extends State<MainPage>
         ),
       ),
     );
+    getList();
   }
 
   // 根據 UUID 搜尋 Beacon 並更新距離
@@ -147,7 +143,7 @@ class _MainPageState extends State<MainPage>
             IconButton(
               icon: Icon(_isScanning ? Icons.stop : Icons.play_arrow), // 啟用後台掃描的按鈕
               onPressed: () {
-                _isScanning ? _stopBeaconScanning() : _startBeaconScanning();
+                _isScanning ?  _stopBeaconScanning() : _startBeaconScanning();
               },
             )
           ],
@@ -155,7 +151,7 @@ class _MainPageState extends State<MainPage>
         body: TabBarView(
           children: <Widget>[
             HomePage(_scannedBeacons, _findBeaconByUUID),
-            ManagePage(getList),
+            ManagePage(_BeaconsList, getList),
           ],
         ),
         drawer: Drawer(
@@ -242,8 +238,10 @@ class HomePage extends StatelessWidget {
 enum ExtraAction { edit, delete, toggleDoor }
 
 class ManagePage extends StatefulWidget {
-  final VoidCallback refreshHome;
-  ManagePage(this.refreshHome, {super.key});
+  final List<Beacon> beaconsList;
+  final VoidCallback refresh;
+
+  ManagePage(this.beaconsList, this.refresh, {super.key});
 
   @override
   _ManagePageState createState() => _ManagePageState();
@@ -270,8 +268,8 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
     setState(() {
       _BeaconsList = list;
     });
-    widget.refreshHome(); // 更新 Home 頁面數據
   }
+
   // Rename the Beacon
   void _renameBeacon(Beacon beacon) async {
     TextEditingController renameController = TextEditingController();
@@ -299,7 +297,8 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
               onPressed: () async {
                 if (renameController.text.isNotEmpty) {
                   Beacon updatedBeacon = beacon.copyWith(item: renameController.text);
-                  _updateBeacon(updatedBeacon);
+                  await BeaconDB.update(updatedBeacon);
+                  getList();
                 }
                 Navigator.of(context).pop();
               },
@@ -311,13 +310,16 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
     );
   }
 
+  // is/isnt the door one
   void _toggleDoorStatus(Beacon beacon) async {
     Beacon updatedBeacon = beacon.copyWith(door: beacon.door == 1 ? 0 : 1);
-    _updateBeacon(updatedBeacon);
+    await BeaconDB.update(updatedBeacon);
+    getList();
   }
 
-  void _updateBeacon(Beacon beacon) async {
-    await BeaconDB.update(beacon);
+  // Delete Beacon
+  void onDeleteBeacon(beacon) async {
+    await BeaconDB.delete(beacon.id);
     getList();
   }
 
@@ -338,57 +340,6 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
       default:
         print('Unexpected action!');
     }
-  }
-
-  // Add Beacon to DB
-  void onAddBeacon(int door, String item, String uuid, Beacon beacon) async {
-    final newBeacon = Beacon(
-        id: DateTime
-            .now()
-            .millisecondsSinceEpoch
-            .toString(),
-        uuid: uuid,
-        item: item,
-        door: door);
-    await BeaconDB.insert(newBeacon);
-    getList();
-  }
-
-  // Press Add Button
-  void onAdd() {
-    Navigator.push<void>(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                EditPage(
-                    beacon: Beacon(id: '', uuid: '', item: '', door: 0),
-                    onSave: onAddBeacon)));
-  }
-
-  // Update Checkbox val of Beacon
-  void onChangeCheckbox(val, beacon) async {
-    final updateBeacon =
-    Beacon(id: beacon.id, item: beacon.name, door: val ? 1 : 0);
-    await BeaconDB.update(updateBeacon);
-    getList();
-  }
-
-  // Update Beacon
-  void onEditBeacon(int door, String item, String uuid, beacon) async {
-    final updateBeacon = Beacon(
-      id: beacon.id,
-      uuid: uuid,
-      item: item,
-      door: door,
-    );
-    await BeaconDB.update(updateBeacon);
-    getList();
-  }
-
-  // Delete Beacon
-  void onDeleteBeacon(beacon) async {
-    await BeaconDB.delete(beacon.id);
-    getList();
   }
 
   @override
@@ -437,11 +388,6 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
           }).toList(),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: onAdd,
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

@@ -21,11 +21,20 @@ Future<void> _checkBlueInfo() async {
     Permission.bluetooth,
     Permission.bluetoothConnect,
     Permission.bluetoothScan,
-    Permission.bluetoothAdvertise
+    Permission.bluetoothAdvertise,
+    Permission.location,
   ].request();
+  bool allPermissionsGranted = statuses.values.every((status) => status.isGranted);
+
+  if (!allPermissionsGranted) {
+    print('缺少藍牙權限');
+    return;
+  }
+  print(statuses[Permission.bluetooth]);
   print(statuses[Permission.bluetoothConnect]);
   print(statuses[Permission.bluetoothScan]);
   print(statuses[Permission.bluetoothAdvertise]);
+  print(statuses[Permission.location]);
 }
 
 class myApp extends StatelessWidget {
