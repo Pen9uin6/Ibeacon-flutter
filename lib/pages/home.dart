@@ -20,7 +20,7 @@ class _MainPageState extends State<MainPage>
   final BackgroundExecute backgroundExecute = Get.put(BackgroundExecute());
   final ScanService scanService = Get.put(ScanService(), permanent: true);
   final RequirementStateController controller =
-  Get.put(RequirementStateController());
+      Get.put(RequirementStateController());
   late TabController _tabController;
   StreamSubscription<List<Map<String, dynamic>>>? _scanSubscription;
 
@@ -120,8 +120,9 @@ class _MainPageState extends State<MainPage>
   // 根據 UUID 搜尋 Beacon 並更新距離
   Beacon? _findBeaconByUUID(String uuid) {
     return _BeaconsList.firstWhere(
-          (beacon) => beacon.uuid == uuid,
-      orElse: () => Beacon(id: '', uuid: '', item: '', door: 0), // 回傳一個空的 Beacon
+      (beacon) => beacon.uuid == uuid,
+      orElse: () =>
+          Beacon(id: '', uuid: '', item: '', door: 0), // 回傳一個空的 Beacon
     );
   }
 
@@ -141,7 +142,8 @@ class _MainPageState extends State<MainPage>
           ),
           actions: <Widget>[
             IconButton(
-              icon: Icon(_isScanning ? Icons.stop : Icons.play_arrow), // 啟用後台掃描的按鈕
+              icon: Icon(
+                  _isScanning ? Icons.stop : Icons.play_arrow), // 啟用後台掃描的按鈕
               onPressed: () {
                 _isScanning ?  _stopBeaconScanning() : _startBeaconScanning();
               },
@@ -155,19 +157,72 @@ class _MainPageState extends State<MainPage>
           ],
         ),
         drawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
+          //  child: ListView(
+          //   padding: EdgeInsets.zero,
+
+          //   children: <Widget>[
+          //     const DrawerHeader(
+          //       decoration: BoxDecoration(
+          //         color: Colors.blueGrey,
+          //       ),
+          //       child: Text("User Name"),
+          //   ]
+          child: Column(
+            verticalDirection: VerticalDirection.down,
             children: <Widget>[
-              const DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Colors.blueGrey,
+              ListTile(
+                title: const Text("User Name"),
+                subtitle: const Text("123123"),
+                tileColor: Colors.blueGrey,
+                titleTextStyle: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20.0,
                 ),
-                child: Text("User Name"),
+                subtitleTextStyle: TextStyle(
+                  color: const Color.fromARGB(255, 228, 217, 217),
+                  fontSize: 16.0,
+                ),
+                minTileHeight: 60.0,
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+                titleAlignment: ListTileTitleAlignment.center,
               ),
+              // const DrawerHeader(
+              //   decoration: BoxDecoration(
+              //     color: Colors.blueGrey,
+              //   ),
+              //   child: Text("User Name"),
+              // ),
+              // UserAccountsDrawerHeader(
+              //   accountName: const Text("User Name"),
+              //   accountEmail: null,
+              //   currentAccountPicture: null,
+              //   // currentAccountPicture: CircleAvatar(
+              //   //   backgroundColor: Colors.white,
+              //   //   child: Text(
+              //   //     "U",
+              //   //     style: TextStyle(fontSize: 40.0),
+              //   //   ),
+              //   // ),
+              //   margin: const EdgeInsets.only(bottom: 0.0),
+              //   decoration: BoxDecoration(
+              //     color: Colors.blueGrey,
+              //   ),
+              // ),
               ListTile(
                 title: const Text("Sign out"),
                 onTap: () {
-                  Navigator.pushReplacementNamed(context, "/login");
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, "/", (route) => false);
+                },
+              ),
+              const Spacer(),
+              const Divider(),
+              ListTile(
+                title: const Text("Home"),
+                onTap: () {
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, "/", (route) => false);
                 },
               ),
             ],
@@ -183,7 +238,6 @@ class _MainPageState extends State<MainPage>
   }
 }
 
-
 class HomePage extends StatelessWidget {
   final List<Map<String, dynamic>> _scannedBeacons;
   final Beacon? Function(String uuid) _findBeaconByUUID;
@@ -192,8 +246,12 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final homeBeacons = _scannedBeacons.where((b) => _findBeaconByUUID(b['uuid'])?.door == 1).toList();
-    final nothomeBeacons = _scannedBeacons.where((b) => _findBeaconByUUID(b['uuid'])?.door == 0).toList();
+    final homeBeacons = _scannedBeacons
+        .where((b) => _findBeaconByUUID(b['uuid'])?.door == 1)
+        .toList();
+    final nothomeBeacons = _scannedBeacons
+        .where((b) => _findBeaconByUUID(b['uuid'])?.door == 0)
+        .toList();
 
     return Scaffold(
       body: Column(children: <Widget>[
@@ -203,27 +261,31 @@ class HomePage extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.all(8.0),
                 child: Text('Door',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               // 顯示 Door 區域的 Beacons
               ...homeBeacons.map((beacon) {
                 final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
                 return ListTile(
                   title: Text('${dbBeacon?.item}'),
-                  subtitle: Text('距離: ${beacon['distance'].toStringAsFixed(2)} m'),
+                  subtitle:
+                      Text('距離: ${beacon['distance'].toStringAsFixed(2)} m'),
                 );
               }).toList(),
               const Padding(
                 padding: EdgeInsets.all(8.0),
                 child: Text('Items',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               // 顯示 Items 區域的 Beacons
               ...nothomeBeacons.map((beacon) {
                 final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
                 return ListTile(
                   title: Text('${dbBeacon?.item}'),
-                  subtitle: Text('距離: ${beacon['distance'].toStringAsFixed(2)} m'),
+                  subtitle:
+                      Text('距離: ${beacon['distance'].toStringAsFixed(2)} m'),
                 );
               }).toList(),
             ],
@@ -323,7 +385,8 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
     getList();
   }
 
-  void onSelectExtraAction(BuildContext context, ExtraAction action, Beacon beacon) {
+  void onSelectExtraAction(
+      BuildContext context, ExtraAction action, Beacon beacon) {
     switch (action) {
       case ExtraAction.edit:
         _renameBeacon(beacon); // 彈出視窗以重新命名
@@ -368,7 +431,8 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
                 ],
               ),
               trailing: PopupMenuButton<ExtraAction>(
-                onSelected: (action) => onSelectExtraAction(context, action, beacon),
+                onSelected: (action) =>
+                    onSelectExtraAction(context, action, beacon),
                 itemBuilder: (context) => [
                   const PopupMenuItem(
                     value: ExtraAction.edit,
