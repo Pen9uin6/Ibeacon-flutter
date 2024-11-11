@@ -177,6 +177,18 @@ class _MainPageState extends State<MainPage>
                 title: const Text("User Name"),
                 subtitle: const Text("123123"),
                 tileColor: Colors.blueGrey,
+                titleTextStyle: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20.0,
+                ),
+                subtitleTextStyle: TextStyle(
+                  color: const Color.fromARGB(255, 228, 217, 217),
+                  fontSize: 16.0,
+                ),
+                minTileHeight: 60.0,
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+                titleAlignment: ListTileTitleAlignment.center,
               ),
               // const DrawerHeader(
               //   decoration: BoxDecoration(
