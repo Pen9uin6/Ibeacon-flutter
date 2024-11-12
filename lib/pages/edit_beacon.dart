@@ -29,8 +29,10 @@ class _EditPageState extends State<EditPage> {
       ));
     } else {
       // 檢查資料庫是否已有相同的 UUID 或物品名稱
-      final existingBeaconByUUID = await BeaconDB.getBeaconByUUID(uuidController.text);
-      final existingBeaconByName = await BeaconDB.getBeaconByName(itemController.text);
+      final existingBeaconByUUID =
+          await BeaconDB.getBeaconByUUID(uuidController.text);
+      final existingBeaconByName =
+          await BeaconDB.getBeaconByName(itemController.text);
 
       if (existingBeaconByUUID != null || existingBeaconByName != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -43,7 +45,8 @@ class _EditPageState extends State<EditPage> {
           ),
         ));
       } else {
-        widget.onSave(door ? 1 : 0, itemController.text, uuidController.text, widget.beacon);
+        widget.onSave(door ? 1 : 0, itemController.text, uuidController.text,
+            widget.beacon);
 
         debugPrint(
             '${door.toString()}, ${itemController.text}, ${uuidController.text}, ${widget.beacon}');
@@ -58,7 +61,7 @@ class _EditPageState extends State<EditPage> {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop(); // 關閉對話框
-                    Navigator.of(context).pop(); // 返回主畫面
+                    Navigator.of(context).pop(); // 關閉對話框
                   },
                   child: const Text('確認'),
                 ),

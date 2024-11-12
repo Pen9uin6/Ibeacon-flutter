@@ -96,7 +96,7 @@ class _MainPageState extends State<MainPage>
   }
 
   // 添加 Beacon 到資料庫
-  void onAddBeacon (int door, String item, String uuid, Beacon beacon) async {
+  void onAddBeacon(int door, String item, String uuid, Beacon beacon) async {
     final newBeacon = Beacon(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       uuid: uuid,
@@ -149,7 +149,7 @@ class _MainPageState extends State<MainPage>
               icon: Icon(
                   _isScanning ? Icons.stop : Icons.play_arrow), // 啟用後台掃描的按鈕
               onPressed: () {
-                _isScanning ?  _stopBeaconScanning() : _startBeaconScanning();
+                _isScanning ? _stopBeaconScanning() : _startBeaconScanning();
               },
             )
           ],
@@ -335,6 +335,16 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
     });
   }
 
+  @override
+  void didUpdateWidget(covariant ManagePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.beaconsList != oldWidget.beaconsList) {
+      setState(() {
+        _BeaconsList = widget.beaconsList;
+      });
+    }
+  }
+
   // Rename the Beacon
   void _renameBeacon(Beacon beacon) async {
     TextEditingController renameController = TextEditingController();
@@ -361,7 +371,8 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
             TextButton(
               onPressed: () async {
                 if (renameController.text.isNotEmpty) {
-                  Beacon updatedBeacon = beacon.copyWith(item: renameController.text);
+                  Beacon updatedBeacon =
+                      beacon.copyWith(item: renameController.text);
                   await BeaconDB.update(updatedBeacon);
                   getList();
                 }

@@ -25,7 +25,8 @@ Future<void> _checkBlueInfo() async {
     Permission.bluetoothAdvertise,
     Permission.location,
   ].request();
-  bool allPermissionsGranted = statuses.values.every((status) => status.isGranted);
+  bool allPermissionsGranted =
+      statuses.values.every((status) => status.isGranted);
 
   if (!allPermissionsGranted) {
     print('缺少藍牙權限');
