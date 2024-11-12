@@ -29,7 +29,7 @@ class MissingEventService {
 
       if (_missingCounts[beaconId] == 3) {
         // _sendMissingNotification(beacon);
-        print('Beacon $item 遺失' );
+        print('$item 遺失' );
       }
     } else {
       print('Beacon $beaconId 距離正常');

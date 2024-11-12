@@ -18,7 +18,8 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final BackgroundExecute backgroundExecute = Get.put(BackgroundExecute());
-  final ScanService scanService = Get.put(ScanService(), permanent: true);
+  // final ScanService scanService = Get.put(ScanService(), permanent: true);
+  ScanService? scanService;
   final RequirementStateController controller =
       Get.put(RequirementStateController());
   late TabController _tabController;
@@ -62,14 +63,16 @@ class _MainPageState extends State<MainPage>
 
   // 開始掃描 Beacon
   void _startBeaconScanning() async {
-    _isScanning = true;
     bool success = await backgroundExecute.initializeBackground();
-    setState(() {}); // 更新掃描按鈕的狀態
+    setState(() {
+      _isScanning = true;
+      scanService = ScanService();
+    }); // 更新掃描按鈕的狀態
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(success ? '掃描已啟用並支援後台運行' : '掃描啟動失敗')),
     );
-    await scanService.scanRegisteredBeacons(_BeaconsList); // 開始掃描
-    _scanSubscription = scanService.beaconStream.listen((scannedBeacons) {
+    await scanService?.scanRegisteredBeacons(_BeaconsList); // 開始掃描
+    _scanSubscription = scanService?.beaconStream.listen((scannedBeacons) {
       setState(() {
         _scannedBeacons = scannedBeacons;
         print("掃描到的已註冊 Beacons: $_scannedBeacons");
@@ -79,11 +82,12 @@ class _MainPageState extends State<MainPage>
 
   // 停止掃描 Beacon
   void _stopBeaconScanning() async {
-    _isScanning = false;
     setState(() {
+      _isScanning = false;
       _scannedBeacons.clear();
     }); // 更新掃描按鈕的狀態
     _scanSubscription?.cancel(); // 取消掃描訂閱
+    scanService?.dispose();
     await backgroundExecute.stopBackgroundExecute();
 
     ScaffoldMessenger.of(context).showSnackBar(
