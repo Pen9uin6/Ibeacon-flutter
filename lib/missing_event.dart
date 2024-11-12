@@ -2,7 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class MissingEventService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
-  final double missingThreshold = 1.5; //遺失臨界距離(m)
+  final double missingThreshold = 3; //遺失臨界距離(m)
   final Map<String, int> _missingCounts = {};
 
   MissingEventService() {

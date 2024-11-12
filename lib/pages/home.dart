@@ -315,7 +315,6 @@ class ManagePage extends StatefulWidget {
 
 class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
   List<Beacon> _BeaconsList = [];
-  final ScanService scanService = Get.find<ScanService>();
 
   @override
   void dispose() {
