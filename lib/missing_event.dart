@@ -30,19 +30,26 @@ class MissingEventService {
   void checkIfItemIsMissing(List<Map<String, dynamic>> scannedBeacons) {
     Set<String> scannedBeaconIds = scannedBeacons.map((b) => b['uuid'] as String).toSet();
 
+    // Beacon全部遺失 全體+1並退出
+    if (scannedBeaconIds.isEmpty) {
+      for (var beacon in registeredBeacons) {
+        _incrementMissingCount(beacon.uuid, beacon.item);
+      }
+      return;
+    }
+
     // 檢查每一個已註冊的 Beacon
     for (var beacon in registeredBeacons) {
       if(beacon.uuid != null) {
-        String beaconId = beacon.uuid;
 
-        if (scannedBeaconIds.contains(beaconId)) {
+        if (scannedBeaconIds.contains(beacon.uuid)) {
           // 如果 Beacon 有掃描到
-          var scannedBeacon = scannedBeacons.firstWhere((b) => b['uuid'] == beaconId);
+          var scannedBeacon = scannedBeacons.firstWhere((b) => b['uuid'] == beacon.uuid);
           double distance = scannedBeacon['distance'];
-          _checkDistance(beaconId, beacon.item, distance);
+          _checkDistance(beacon.uuid, beacon.item, distance);
         } else {
           // 如果 Beacon 沒有掃描到，計算為信號消失
-          _incrementMissingCount(beaconId, beacon.item);
+          _incrementMissingCount(beacon.uuid, beacon.item);
         }
       }
     }
