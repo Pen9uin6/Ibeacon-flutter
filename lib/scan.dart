@@ -47,13 +47,12 @@ class ScanService {
               'uuid': beaconId,
               'distance': distance,
               'rssi': rssi,
-            });
-            // 傳遞掃描數據給 MissingEventService 進行檢查
-            _missingEventService.checkIfItemIsMissing(scannedBeacons);
+            });;
           }
         }
       }
       _beaconStreamController.add(scannedBeacons);
+      _missingEventService.checkIfItemIsMissing(scannedBeacons);
     });
   }
 

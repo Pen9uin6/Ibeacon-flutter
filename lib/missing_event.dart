@@ -46,22 +46,18 @@ class MissingEventService {
           // 如果 Beacon 有掃描到
           var scannedBeacon = scannedBeacons.firstWhere((b) => b['uuid'] == beacon.uuid);
           double distance = scannedBeacon['distance'];
-          _checkDistance(beacon.uuid, beacon.item, distance);
+          // 檢查距離是否超過臨界值
+          if (distance > missingThreshold) {
+            _incrementMissingCount(beacon.uuid, beacon.item);
+          } else {
+            // 如果距離正常，重置計數
+            _missingCounts[beacon.uuid] = 0;
+          }
         } else {
           // 如果 Beacon 沒有掃描到，計算為信號消失
           _incrementMissingCount(beacon.uuid, beacon.item);
         }
       }
-    }
-  }
-
-  // 檢查距離是否超過臨界值
-  void _checkDistance(String beaconId, String item, double distance) {
-    if (distance > missingThreshold) {
-      _incrementMissingCount(beaconId, item);
-    } else {
-      // 如果距離正常，重置計數
-      _missingCounts[beaconId] = 0;
     }
   }
 
@@ -121,7 +117,13 @@ class MissingEventService {
     String? payload = notificationResponse.payload;
     if (payload != null) {
       print('通知被選擇: $payload');
-      // 可以在這裡加入需要的額外操作，例如跳轉或顯示提示
+
+      // Get.toNamed('pages/searching', arguments: {
+      //   'itemName': payload,
+      //   'beaconId': payload, // 假設 payload 同時包含 beaconId
+      // });
+
+      Get.offAllNamed('pages/home'); // 移除所有頁面並導航到主頁
     }
   }
 
