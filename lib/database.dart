@@ -5,12 +5,12 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
 
 class Beacon {
-  final String? id; // 此存取id
-  final String? uuid; // iBeacon UUID
+  final String id; // 此存取id
+  final String uuid; // iBeacon UUID
   final String item; // 與此UUID綁定的物品名稱
   final int? door; // 是否是門口那顆
 
-  Beacon({this.id, this.uuid, this.item = '', this.door});
+  Beacon({ required this.id, required this.uuid, this.item = '', this.door});
 
   Map<String, dynamic> toMap() {
     return {

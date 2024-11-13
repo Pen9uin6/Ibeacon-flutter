@@ -422,16 +422,13 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Registered Beacons'),
-      ),
       body: ListView(
         children: [
           const Padding(
             padding: EdgeInsets.all(8.0),
             child: Text(
-              'All Beacons',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              'Manage Registered Beacons',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ),
           ..._BeaconsList.map((beacon) {
