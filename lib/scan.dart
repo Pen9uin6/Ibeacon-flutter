@@ -2,13 +2,14 @@ import 'dart:async';
 import 'package:flutter_beacon/flutter_beacon.dart';
 import 'package:test/missing_event.dart';
 import 'package:test/database.dart' as db;
+import 'package:get/get.dart';
 
 class ScanService {
   late final StreamController<List<Map<String, dynamic>>> _beaconStreamController;
   final MissingEventService _missingEventService;
   StreamSubscription? _scanSubscription;
 
-  ScanService(): _missingEventService = MissingEventService() {
+  ScanService(RxList<db.Beacon> sharedBeaconsList): _missingEventService = MissingEventService(sharedBeaconsList) {
     _beaconStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
   }
 
@@ -37,10 +38,10 @@ class ScanService {
 
       for (var beacon in result.beacons) {
         final beaconId = beacon.proximityUUID;
-        final rssi = beacon.rssi.toDouble() ?? 0;
+        final rssi = beacon.rssi.toDouble();
         final distance = beacon.accuracy; // 使用 flutter_beacon 提供的距離模型
 
-        if (distance != null && distance > 0){
+        if (distance > 0){
           // 檢查該 Beacon 是否在已註冊的 Beacon 中
           if (registeredBeacons.any((b) => b.uuid == beaconId)) {
             scannedBeacons.add({
@@ -75,10 +76,10 @@ class ScanService {
       List<Map<String, dynamic>> scannedBeacons = [];
       for (var beacon in result.beacons) {
         final beaconId = beacon.proximityUUID;
-        final rssi = beacon.rssi.toDouble() ?? 0;
+        final rssi = beacon.rssi.toDouble();
         final distance = beacon.accuracy; // 使用 flutter_beacon 提供的距離模型
 
-        if (distance != null && distance > 0) {
+        if (distance > 0) {
           scannedBeacons.add({
             'uuid': beaconId,
             'distance': distance,
@@ -86,7 +87,7 @@ class ScanService {
           });
         }
       }
-      _beaconStreamController?.add(scannedBeacons);
+      _beaconStreamController.add(scannedBeacons);
     });
   }
 

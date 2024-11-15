@@ -8,8 +8,9 @@ class MissingEventService {
   final double missingThreshold = 3; //遺失臨界距離(m)
   final Map<String, int> _missingCounts = {};
   List<db.Beacon> registeredBeacons = [];
+  final RxList<db.Beacon> _BeaconsList;
 
-  MissingEventService() {
+  MissingEventService(this._BeaconsList) {
     _initializeNotifications();
   }
 
@@ -18,7 +19,9 @@ class MissingEventService {
     final InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
     );
-    _notificationsPlugin.initialize(initializationSettings, onDidReceiveNotificationResponse: _onSelectNotification);
+    _notificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: _onSelectNotification);
   }
 
   // 更新已註冊的 Beacon 列表
@@ -49,9 +52,11 @@ class MissingEventService {
           // 檢查距離是否超過臨界值
           if (distance > missingThreshold) {
             _incrementMissingCount(beacon.uuid, beacon.item);
-          } else {
+          }
+          else {
             // 如果距離正常，重置計數
             _missingCounts[beacon.uuid] = 0;
+            _updateBeaconMissingStatus(beacon.uuid, 0);
           }
         } else {
           // 如果 Beacon 沒有掃描到，計算為信號消失
@@ -68,7 +73,31 @@ class MissingEventService {
 
     if (_missingCounts[beaconId] == 3) {
       _sendMissingNotification(beaconId, item);
+      _updateBeaconMissingStatus(beaconId, 1);
       print('$item 遺失');
+
+    }
+  }
+
+  // 更新 Beacon 的 isMissing 屬性
+  Future<void> _updateBeaconMissingStatus(String beaconId, int isMissing) async {
+    db.Beacon? beacon = await db.BeaconDB.getBeaconByUUID(beaconId);
+    if (beacon != null) {
+      if (beacon.isMissing != isMissing) {
+        beacon = beacon.copyWith(isMissing: isMissing);
+        await db.BeaconDB.update(beacon);
+
+        // 找到對應的 Beacon 並更新 RxList
+        final index = _BeaconsList.indexWhere((b) => b.uuid == beaconId);
+        if (index != -1) {
+          _BeaconsList[index] = beacon; // 更新單個 Beacon
+        }
+
+        print('Beacon $beaconId 的 isMissing 狀態已更新為 $isMissing');
+      }
+      if (Get.isRegistered<HomePage>()) {
+        Get.find<HomePage>().refreshCallback();
+      }
     }
   }
 

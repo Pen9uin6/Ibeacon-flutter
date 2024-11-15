@@ -9,8 +9,9 @@ class Beacon {
   final String uuid; // iBeacon UUID
   final String item; // 與此UUID綁定的物品名稱
   final int? door; // 是否是門口那顆
+  final int isMissing; // 是否遺失
 
-  Beacon({ required this.id, required this.uuid, this.item = '', this.door});
+  Beacon({ required this.id, required this.uuid, this.item = '', this.door, required this.isMissing});
 
   Map<String, dynamic> toMap() {
     return {
@@ -18,6 +19,7 @@ class Beacon {
       'uuid': uuid,
       'item': item,
       'home': door,
+      'isMissing': isMissing,
     };
   }
 
@@ -26,18 +28,20 @@ class Beacon {
     String? uuid,
     String? item,
     int? door,
+    int? isMissing,
   }) {
     return Beacon(
       id: id ?? this.id,
       uuid: uuid ?? this.uuid,
       item: item ?? this.item,
       door: door ?? this.door,
+      isMissing: isMissing ?? this.isMissing,
     );
   }
 
   @override
   String toString() {
-    return 'Beacon(id: $id, uuid: $uuid, item: $item, door: $door)';
+    return 'Beacon(id: $id, uuid: $uuid, item: $item, door: $door, isMissing: $isMissing)';
   }
 }
 
@@ -65,7 +69,7 @@ class BeaconDB {
 
   Future _onCreate(Database db, int version) async {
     await db.execute(
-        'CREATE TABLE Beacons(id TEXT PRIMARY KEY, uuid TEXT, item TEXT, home INTEGER)');
+        'CREATE TABLE Beacons(id TEXT PRIMARY KEY, uuid TEXT, item TEXT, home INTEGER, isMissing INTEGER)');
   }
 
   static Future<int> insert(Beacon beacon) async {
@@ -106,6 +110,7 @@ class BeaconDB {
         uuid: maps[i]['uuid'],
         item: maps[i]['item'],
         door: maps[i]['home'],
+        isMissing: maps[i]['isMissing']
       );
     });
   }
@@ -124,6 +129,7 @@ class BeaconDB {
         uuid: maps.first['uuid'],
         item: maps.first['item'],
         door: maps.first['home'],
+        isMissing: maps.first['isMissing'],
       );
     }
     return null;
@@ -143,6 +149,7 @@ class BeaconDB {
         uuid: maps.first['uuid'],
         item: maps.first['item'],
         door: maps.first['home'],
+        isMissing: maps.first['isMissing'],
       );
     }
     return null;

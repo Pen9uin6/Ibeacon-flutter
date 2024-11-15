@@ -77,7 +77,7 @@ class _EditPageState extends State<EditPage> {
   void initState() {
     super.initState();
     itemController.text = widget.beacon.item;
-    uuidController.text = widget.beacon.uuid ?? '';
+    uuidController.text = widget.beacon.uuid;
     door = widget.beacon.door == 1;
   }
 

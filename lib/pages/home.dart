@@ -25,7 +25,7 @@ class _MainPageState extends State<MainPage>
   late TabController _tabController;
   StreamSubscription<List<Map<String, dynamic>>>? _scanSubscription;
 
-  List<Beacon> _BeaconsList = [];
+  RxList<Beacon> _BeaconsList = <Beacon>[].obs;
   List<Map<String, dynamic>> _scannedBeacons = [];
   bool _isScanning = false;
 
@@ -55,10 +55,12 @@ class _MainPageState extends State<MainPage>
   // 讀取所有 Beacons 並重建 UI
   void getList() async {
     final list = await BeaconDB.getBeacons();
-    setState(() {
-      _BeaconsList = list;
-      print("從資料庫獲取的 Beacons: $_BeaconsList");
-    });
+    _BeaconsList.assignAll(list); // 直接更新 RxList
+    print("從資料庫獲取的 Beacons: $_BeaconsList");
+    // setState(() {
+    //   _BeaconsList = list;
+    //   print("從資料庫獲取的 Beacons: $_BeaconsList");
+    // });
   }
 
   // 開始掃描 Beacon
@@ -66,7 +68,7 @@ class _MainPageState extends State<MainPage>
     bool success = await backgroundExecute.initializeBackground();
     setState(() {
       _isScanning = true;
-      scanService = ScanService();
+      scanService = ScanService(_BeaconsList);
     }); // 更新掃描按鈕的狀態
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(success ? '掃描已啟用並支援後台運行' : '掃描啟動失敗')),
@@ -102,6 +104,7 @@ class _MainPageState extends State<MainPage>
       uuid: uuid,
       item: item,
       door: door,
+      isMissing: 0,
     );
     await BeaconDB.insert(newBeacon);
     getList();
@@ -113,7 +116,7 @@ class _MainPageState extends State<MainPage>
       context,
       MaterialPageRoute(
         builder: (context) => EditPage(
-          beacon: Beacon(id: '', uuid: '', item: '', door: 0),
+          beacon: Beacon(id: '', uuid: '', item: '', door: 0, isMissing: 0),
           onSave: onAddBeacon,
         ),
       ),
@@ -126,7 +129,7 @@ class _MainPageState extends State<MainPage>
     return _BeaconsList.firstWhere(
       (beacon) => beacon.uuid == uuid,
       orElse: () =>
-          Beacon(id: '', uuid: '', item: '', door: 0), // 回傳一個空的 Beacon
+          Beacon(id: '', uuid: '', item: '', door: 0, isMissing: 0), // 回傳一個空的 Beacon
     );
   }
 
@@ -156,7 +159,7 @@ class _MainPageState extends State<MainPage>
         ),
         body: TabBarView(
           children: <Widget>[
-            HomePage(_scannedBeacons, _findBeaconByUUID),
+            HomePage(_scannedBeacons, _BeaconsList, _isScanning, _findBeaconByUUID, getList),
             ManagePage(_BeaconsList, getList),
           ],
         ),
@@ -242,63 +245,116 @@ class _MainPageState extends State<MainPage>
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final List<Map<String, dynamic>> _scannedBeacons;
+  final List<Beacon> _BeaconsList;
+  final bool isScanning;
   final Beacon? Function(String uuid) _findBeaconByUUID;
+  final VoidCallback refreshCallback;
 
-  HomePage(this._scannedBeacons, this._findBeaconByUUID, {super.key});
+  HomePage(
+      this._scannedBeacons,
+      this._BeaconsList,
+      this.isScanning,
+      this._findBeaconByUUID,
+      this.refreshCallback,
+      {super.key,}
+      );
 
   @override
-  Widget build(BuildContext context) {
-    final homeBeacons = _scannedBeacons
-        .where((b) => _findBeaconByUUID(b['uuid'])?.door == 1)
-        .toList();
-    final nothomeBeacons = _scannedBeacons
-        .where((b) => _findBeaconByUUID(b['uuid'])?.door == 0)
-        .toList();
+  _HomePageState createState() => _HomePageState();
+}
 
-    return Scaffold(
-      body: Column(children: <Widget>[
-        Expanded(
-          child: ListView(
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text('Door',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+class _HomePageState extends State<HomePage> {
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isScanning) {
+      return Center(
+        child: Text(
+          '請開啟掃描以執行檢視功能',
+          style: TextStyle(fontSize: 18, color: Colors.grey),
+        ),
+      );
+    } else {
+      return Obx((){
+        final homeBeacons = widget._scannedBeacons
+            .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 1 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
+            .toList();
+        final nothomeBeacons = widget._scannedBeacons
+            .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 0 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
+            .toList();
+        final missingBeacons = widget._BeaconsList
+            .where((b) => b.door == 0  && b.isMissing == 1)
+            .toList();
+
+        return Scaffold(
+          body: Column(
+            children: <Widget>[
+              Expanded(
+                child: ListView(
+                  children: [
+                    //door區
+                    const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Door',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                    ...homeBeacons.map((beacon) {
+                      final Beacon? dbBeacon =
+                      widget._findBeaconByUUID(beacon['uuid']);
+                      return ListTile(
+                        title: Text('${dbBeacon?.item}'),
+                        subtitle: Text(
+                            '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
+                      );
+                    }).toList(),
+                    //item區
+                    const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Item',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                    ...nothomeBeacons.map((beacon) {
+                      final Beacon? dbBeacon =
+                      widget._findBeaconByUUID(beacon['uuid']);
+                      return ListTile(
+                        title: Text('${dbBeacon?.item}'),
+                        subtitle: Text(
+                            '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
+                      );
+                    }).toList(),
+                    //missing區
+                    const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('Missing',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                    ...missingBeacons.map((beacon) {
+                      return ListTile(
+                        title: Text(beacon.item),
+                        trailing: ElevatedButton(
+                          onPressed: () {
+                            // Navigate to SearchingPage or handle button press
+                          },
+                          child: const Text('尋物'),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
               ),
-              // 顯示 Door 區域的 Beacons
-              ...homeBeacons.map((beacon) {
-                final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
-                return ListTile(
-                  title: Text('${dbBeacon?.item}'),
-                  subtitle:
-                      Text('距離: ${beacon['distance'].toStringAsFixed(2)} m'),
-                );
-              }).toList(),
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text('Items',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-              // 顯示 Items 區域的 Beacons
-              ...nothomeBeacons.map((beacon) {
-                final Beacon? dbBeacon = _findBeaconByUUID(beacon['uuid']);
-                return ListTile(
-                  title: Text('${dbBeacon?.item}'),
-                  subtitle:
-                      Text('距離: ${beacon['distance'].toStringAsFixed(2)} m'),
-                );
-              }).toList(),
             ],
           ),
-        ),
-      ]),
-    );
+        );
+      }
+      );
+    }
   }
 }
+
 
 // define ExtraActions (Update or Delete)
 enum ExtraAction { edit, delete, toggleDoor }
@@ -307,7 +363,10 @@ class ManagePage extends StatefulWidget {
   final List<Beacon> beaconsList;
   final VoidCallback refresh;
 
-  ManagePage(this.beaconsList, this.refresh, {super.key});
+  ManagePage(
+      this.beaconsList,
+      this.refresh,
+      {super.key});
 
   @override
   _ManagePageState createState() => _ManagePageState();
