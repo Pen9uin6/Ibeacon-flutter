@@ -51,7 +51,7 @@ class myApp extends StatelessWidget {
       ),
       routes: {
         GitmeRebornRoutes.login: (context) => LoginPage(),
-        GitmeRebornRoutes.home: (context) => MainPage(),
+        GitmeRebornRoutes.home: (context) => HomePage(),
         GitmeRebornRoutes.welcome: (context) => WelcomePage(),
       },
       onGenerateRoute: (settings) {
@@ -62,7 +62,7 @@ class myApp extends StatelessWidget {
             );
           default:
             return MaterialPageRoute(
-              builder: (context) => MainPage(),
+              builder: (context) => HomePage(),
             );
         }
       },

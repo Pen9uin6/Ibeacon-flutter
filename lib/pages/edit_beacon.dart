@@ -108,8 +108,9 @@ class _EditPageState extends State<EditPage> {
             children: [
               TextFormField(
                 controller: itemController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'item:',
+                  labelStyle: TextStyle(color: Colors.black),
                   hintText: 'Enter the name of item',
                   hintStyle: TextStyle(color: Colors.grey),
                 ),
@@ -118,6 +119,7 @@ class _EditPageState extends State<EditPage> {
                 controller: uuidController,
                 decoration: const InputDecoration(
                   labelText: 'iBeacon UUID:',
+                  labelStyle: TextStyle(color: Colors.black),
                   hintText: 'Enter the UUID of iBeacon',
                   hintStyle: TextStyle(color: Colors.grey),
                 ),

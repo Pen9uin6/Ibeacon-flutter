@@ -3,19 +3,20 @@ import "edit_beacon.dart";
 import 'package:test/database.dart';
 import 'package:test/background.dart';
 import 'package:test/scan.dart';
+import 'package:test/pages/searching.dart';
 import 'package:test/requirement_state_controller.dart';
 import 'package:get/get.dart';
 import 'dart:async';
 
 // 主頁面
-class MainPage extends StatefulWidget {
-  MainPage({super.key});
+class HomePage extends StatefulWidget {
+  HomePage({super.key});
 
   @override
   _MainPageState createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage>
+class _MainPageState extends State<HomePage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final BackgroundExecute backgroundExecute = Get.put(BackgroundExecute());
   // final ScanService scanService = Get.put(ScanService(), permanent: true);
@@ -66,20 +67,20 @@ class _MainPageState extends State<MainPage>
   // 開始掃描 Beacon
   void _startBeaconScanning() async {
     bool success = await backgroundExecute.initializeBackground();
+    scanService = Get.put(ScanService(_BeaconsList));
     setState(() {
       _isScanning = true;
-      scanService = ScanService(_BeaconsList);
     }); // 更新掃描按鈕的狀態
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(success ? '掃描已啟用並支援後台運行' : '掃描啟動失敗')),
     );
-    await scanService?.scanRegisteredBeacons(_BeaconsList); // 開始掃描
     _scanSubscription = scanService?.beaconStream.listen((scannedBeacons) {
       setState(() {
         _scannedBeacons = scannedBeacons;
         print("掃描到的已註冊 Beacons: $_scannedBeacons");
       });
     });
+    await scanService?.scanRegisteredBeacons(_BeaconsList); // 開始掃描
   }
 
   // 停止掃描 Beacon
@@ -89,7 +90,9 @@ class _MainPageState extends State<MainPage>
       _scannedBeacons.clear();
     }); // 更新掃描按鈕的狀態
     _scanSubscription?.cancel(); // 取消掃描訂閱
-    scanService?.dispose();
+    _scanSubscription = null;
+    scanService?.stopScanning();
+    scanService = null;
     await backgroundExecute.stopBackgroundExecute();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -143,7 +146,7 @@ class _MainPageState extends State<MainPage>
           title: const TabBar(
             labelPadding: EdgeInsets.zero,
             tabs: <Widget>[
-              Tab(text: "Home"),
+              Tab(text: "Scan"),
               Tab(text: "Manage"),
             ],
           ),
@@ -159,7 +162,13 @@ class _MainPageState extends State<MainPage>
         ),
         body: TabBarView(
           children: <Widget>[
-            HomePage(_scannedBeacons, _BeaconsList, _isScanning, _findBeaconByUUID, getList),
+            ScanPage(
+              _scannedBeacons,
+              _BeaconsList,
+              _isScanning,
+              _findBeaconByUUID,
+              getList,
+            ),
             ManagePage(_BeaconsList, getList),
           ],
         ),
@@ -245,37 +254,63 @@ class _MainPageState extends State<MainPage>
   }
 }
 
-class HomePage extends StatefulWidget {
+class ScanPage extends StatefulWidget {
   final List<Map<String, dynamic>> _scannedBeacons;
-  final List<Beacon> _BeaconsList;
+  final RxList<Beacon> _BeaconsList;
   final bool isScanning;
   final Beacon? Function(String uuid) _findBeaconByUUID;
   final VoidCallback refreshCallback;
+  final ScanService? scanService;
 
-  HomePage(
+  ScanPage(
       this._scannedBeacons,
       this._BeaconsList,
       this.isScanning,
       this._findBeaconByUUID,
       this.refreshCallback,
-      {super.key,}
+      {this.scanService,super.key,}
       );
 
   @override
-  _HomePageState createState() => _HomePageState();
+  _ScanPageState createState() => _ScanPageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _ScanPageState extends State<ScanPage> {
+  late ScanService? scanService;
+
+  @override
+  void initState() {
+    super.initState();
+    scanService = widget.scanService ?? Get.put(ScanService(widget._BeaconsList));
+  }
+
+  @override
   @override
   Widget build(BuildContext context) {
     if (!widget.isScanning) {
       return Center(
-        child: Text(
-          '請開啟掃描以執行檢視功能',
-          style: TextStyle(fontSize: 18, color: Colors.grey),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              '啟動掃描以檢視裝置資訊',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+            const SizedBox(height: 16.0),
+          ],
         ),
       );
-    } else {
+    }
+
+    // 當 scanService 為 null 時，避免出錯
+    if (scanService == null) {
+      return Center(
+        child: const Text(
+          '掃描服務尚未初始化，請啟動掃描',
+          style: TextStyle(fontSize: 18, color: Colors.red),
+        ),
+      );
+    }
       return Obx((){
         final homeBeacons = widget._scannedBeacons
             .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 1 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
@@ -337,7 +372,17 @@ class _HomePageState extends State<HomePage> {
                         title: Text(beacon.item),
                         trailing: ElevatedButton(
                           onPressed: () {
-                            // Navigate to SearchingPage or handle button press
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SearchingPage(
+                                  itemName: beacon.item,
+                                  beaconId: beacon.uuid,
+                                  scannedBeacons: widget._scannedBeacons,
+                                  beaconStream: widget.scanService!.beaconStream,
+                                ),
+                              ),
+                            );
                           },
                           child: const Text('尋物'),
                         ),
@@ -353,7 +398,6 @@ class _HomePageState extends State<HomePage> {
       );
     }
   }
-}
 
 
 // define ExtraActions (Update or Delete)
@@ -416,7 +460,9 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
           content: TextField(
             controller: renameController,
             decoration: const InputDecoration(
+              labelStyle: TextStyle(color: Colors.black),
               labelText: "Enter new name",
+              hintStyle: TextStyle(color: Colors.grey),
               hintText: "New Beacon Name",
             ),
           ),

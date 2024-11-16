@@ -96,7 +96,16 @@ class BeaconDB {
 
   static Future<int> delete(String id) async {
     Database? db = await instance.database;
-    return await db!.delete(table, where: 'id = ?', whereArgs: [id]);
+    // 確認該 Beacon 是否存在
+    final existingBeacon = await db!.query(
+      table,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (existingBeacon.isEmpty) {
+      return 0;
+    }
+    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 
   //////////////////////////////////////////////////////

@@ -16,7 +16,7 @@ class ScanService {
   Stream<List<Map<String, dynamic>>> get beaconStream => _beaconStreamController.stream;
 
   // 掃描已註冊beacon
-  Future<void>scanRegisteredBeacons(List<db.Beacon> registeredBeacons) async {
+  Future<void>scanRegisteredBeacons(RxList<db.Beacon> registeredBeacons) async {
     print("初始化掃描已註冊的 Beacon......");
     try {
       await flutterBeacon.initializeAndCheckScanning;
@@ -30,7 +30,6 @@ class ScanService {
 
     // 設置掃描區域
     final regions = <Region>[Region(identifier: 'com.beacon')];
-    await _scanSubscription?.cancel();
 
     // 開始掃描並監聽掃描結果
     _scanSubscription = flutterBeacon.ranging(regions).listen((result) {
@@ -58,7 +57,7 @@ class ScanService {
   }
 
   // 掃描全部beacon
-  Future<void> startScanning() async {
+  Future<void> startAllscanning() async {
     print("初始化掃描所有 Beacon...");
     try {
       await flutterBeacon.initializeAndCheckScanning;
@@ -69,7 +68,6 @@ class ScanService {
 
     // 設置掃描區域
     final regions = <Region>[Region(identifier: 'com.beacon')];
-    await _scanSubscription?.cancel();
 
     // 開始掃描並監聽掃描結果
     _scanSubscription = flutterBeacon.ranging(regions).listen((result) {
@@ -95,9 +93,6 @@ class ScanService {
   Future<void> stopScanning() async {
     await _scanSubscription?.cancel(); // 正確取消訂閱
     _scanSubscription = null; // 重置訂閱
-    if (!_beaconStreamController.isClosed) {
-      _beaconStreamController.close(); // 關閉流控制器
-    }
   }
 
   void dispose() {

@@ -45,6 +45,7 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   get: ^4.6.6
   flutter_beacon: ^0.5.1
+  collection: ^1.18.0
 
 dev_dependencies:
   flutter_test:
