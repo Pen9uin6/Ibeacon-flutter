@@ -48,6 +48,7 @@ class _MainPageState extends State<HomePage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this); // 移除狀態監聽
     _stopBeaconScanning(); // 停止掃描
+    _scanSubscription?.cancel(); // 確保取消所有掃描訂閱
 
     super.dispose();
   }
@@ -97,7 +98,7 @@ class _MainPageState extends State<HomePage>
     }); // 更新掃描按鈕的狀態
     _scanSubscription?.cancel();
     _scanSubscription = null;
-    scanService.stopScanning();
+    await scanService.stopScanning();
     await backgroundExecute.stopBackgroundExecute();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -308,115 +309,105 @@ class _ScanPageState extends State<ScanPage> {
         ),
       );
     }
+    return Obx((){
+      final homeBeacons = widget._scannedBeacons
+          .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 1 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
+          .toList();
+      final nothomeBeacons = widget._scannedBeacons
+          .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 0 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
+          .toList();
+      final missingBeacons = widget._BeaconsList
+          .where((b) => b.door == 0  && b.isMissing == 1)
+          .toList();
 
-    if (scanService == null) {
-      return Center(
-        child: const Text(
-          '掃描服務尚未初始化，請啟動掃描',
-          style: TextStyle(fontSize: 18, color: Colors.red),
+      return Scaffold(
+        body: Column(
+          children: <Widget>[
+            Expanded(
+              child: ListView(
+                children: [
+                  //door區
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('Door',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                  ...homeBeacons.map((beacon) {
+                    final Beacon? dbBeacon =
+                    widget._findBeaconByUUID(beacon['uuid']);
+                    return ListTile(
+                      title: Text('${dbBeacon?.item}'),
+                      subtitle: Text(
+                          '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
+                    );
+                  }).toList(),
+                  //item區
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('Item',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                  ...nothomeBeacons.map((beacon) {
+                    final Beacon? dbBeacon =
+                    widget._findBeaconByUUID(beacon['uuid']);
+                    return ListTile(
+                      title: Text('${dbBeacon?.item}'),
+                      subtitle: Text(
+                          '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
+                    );
+                  }).toList(),
+                  //missing區
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('Missing',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                  ...missingBeacons.map((beacon) {
+                    return ListTile(
+                      title: Text(beacon.item),
+                      trailing: ElevatedButton(
+                        onPressed: () {
+                          print("傳送到 SearchingPage 的資料:");
+                          print("Item Name: ${beacon.item}");
+                          print("Beacon ID: ${beacon.uuid}");
+                          print("Scanned Beacons: ${widget._scannedBeacons}");
+                          print("Beacon Stream: ${widget.scanService?.beaconStream}");
+
+                          if (widget.scanService == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('掃描服務尚未初始化，請啟動掃描')),
+                            );
+                            return;
+                          }
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SearchingPage(
+                                itemName: beacon.item,
+                                beaconId: beacon.uuid,
+                                scannedBeacons: widget._scannedBeacons,
+                                beaconStream: widget.scanService.beaconStream,
+                              ),
+                            ),
+                          );
+                          },
+                        child: const Text('尋物'),
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ],
         ),
       );
-    }
-      return Obx((){
-        final homeBeacons = widget._scannedBeacons
-            .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 1 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
-            .toList();
-        final nothomeBeacons = widget._scannedBeacons
-            .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 0 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
-            .toList();
-        final missingBeacons = widget._BeaconsList
-            .where((b) => b.door == 0  && b.isMissing == 1)
-            .toList();
-
-        return Scaffold(
-          body: Column(
-            children: <Widget>[
-              Expanded(
-                child: ListView(
-                  children: [
-                    //door區
-                    const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text('Door',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                    ),
-                    ...homeBeacons.map((beacon) {
-                      final Beacon? dbBeacon =
-                      widget._findBeaconByUUID(beacon['uuid']);
-                      return ListTile(
-                        title: Text('${dbBeacon?.item}'),
-                        subtitle: Text(
-                            '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
-                      );
-                    }).toList(),
-                    //item區
-                    const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text('Item',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                    ),
-                    ...nothomeBeacons.map((beacon) {
-                      final Beacon? dbBeacon =
-                      widget._findBeaconByUUID(beacon['uuid']);
-                      return ListTile(
-                        title: Text('${dbBeacon?.item}'),
-                        subtitle: Text(
-                            '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
-                      );
-                    }).toList(),
-                    //missing區
-                    const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text('Missing',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                    ),
-                    ...missingBeacons.map((beacon) {
-                      return ListTile(
-                        title: Text(beacon.item),
-                        trailing: ElevatedButton(
-                          onPressed: () {
-                            print("傳送到 SearchingPage 的資料:");
-                            print("Item Name: ${beacon.item}");
-                            print("Beacon ID: ${beacon.uuid}");
-                            print("Scanned Beacons: ${widget._scannedBeacons}");
-                            print("Beacon Stream: ${widget.scanService?.beaconStream}");
-
-                            if (widget.scanService == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('掃描服務尚未初始化，請啟動掃描')),
-                              );
-                              return;
-                            }
-
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SearchingPage(
-                                  itemName: beacon.item,
-                                  beaconId: beacon.uuid,
-                                  scannedBeacons: widget._scannedBeacons,
-                                  beaconStream: widget.scanService.beaconStream,
-                                ),
-                              ),
-                            );
-                          },
-                          child: const Text('尋物'),
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-      );
-    }
+    });
   }
+}
 
 
 // define ExtraActions (Update or Delete)

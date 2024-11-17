@@ -5,7 +5,7 @@ import 'package:test/pages/home.dart';
 
 class MissingEventService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
-  final double missingThreshold = 1; //遺失臨界距離(m)
+  final double missingThreshold = 3; //遺失臨界距離(m)
   final Map<String, int> _missingCounts = {};
   List<db.Beacon> registeredBeacons = [];
   final RxList<db.Beacon> _BeaconsList;
