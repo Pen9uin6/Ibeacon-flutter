@@ -43,25 +43,24 @@ class MissingEventService {
 
     // 檢查每一個已註冊的 Beacon
     for (var beacon in registeredBeacons) {
-      if(beacon.uuid != null) {
 
-        if (scannedBeaconIds.contains(beacon.uuid)) {
-          // 如果 Beacon 有掃描到
-          var scannedBeacon = scannedBeacons.firstWhere((b) => b['uuid'] == beacon.uuid);
-          double distance = scannedBeacon['distance'];
-          // 檢查距離是否超過臨界值
-          if (distance > missingThreshold) {
-            _incrementMissingCount(beacon.uuid, beacon.item);
-          }
-          else {
-            // 如果距離正常，重置計數
-            _missingCounts[beacon.uuid] = 0;
-            _updateBeaconMissingStatus(beacon.uuid, 0);
-          }
-        } else {
-          // 如果 Beacon 沒有掃描到，計算為信號消失
+      if (scannedBeaconIds.contains(beacon.uuid)) {
+        // 如果 Beacon 有掃描到
+        var scannedBeacon = scannedBeacons.firstWhere((b) => b['uuid'] == beacon.uuid);
+        double distance = scannedBeacon['distance'];
+        // 檢查距離是否超過臨界值
+        if (distance > missingThreshold) {
           _incrementMissingCount(beacon.uuid, beacon.item);
         }
+        else {
+          // 如果距離正常，重置計數
+          _missingCounts[beacon.uuid] = 0;
+          _updateBeaconMissingStatus(beacon.uuid, 0);
+        }
+      }
+      else {
+        // 如果 Beacon 沒有掃描到，計算為信號消失
+        _incrementMissingCount(beacon.uuid, beacon.item);
       }
     }
   }

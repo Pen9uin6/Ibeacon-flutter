@@ -20,9 +20,8 @@ class _MainPageState extends State<HomePage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final BackgroundExecute backgroundExecute = Get.put(BackgroundExecute());
   // final ScanService scanService = Get.put(ScanService(), permanent: true);
-  ScanService? scanService;
-  final RequirementStateController controller =
-      Get.put(RequirementStateController());
+  late ScanService scanService;
+  final RequirementStateController controller = Get.put(RequirementStateController());
   late TabController _tabController;
   StreamSubscription<List<Map<String, dynamic>>>? _scanSubscription;
 
@@ -39,8 +38,7 @@ class _MainPageState extends State<HomePage>
     WidgetsBinding.instance.addObserver(this); // 監聽應用狀態
 
     if (!Get.isRegistered<ScanService>()) {
-      scanService = ScanService(_BeaconsList);
-      Get.put(scanService!);
+      scanService = Get.put(ScanService(_BeaconsList), permanent: true);
     } else {
       scanService = Get.find<ScanService>();
     }
@@ -51,9 +49,6 @@ class _MainPageState extends State<HomePage>
     WidgetsBinding.instance.removeObserver(this); // 移除狀態監聽
     _stopBeaconScanning(); // 停止掃描
 
-    if (Get.isRegistered<ScanService>()) {
-      Get.delete<ScanService>();
-    }
     super.dispose();
   }
 
@@ -85,13 +80,13 @@ class _MainPageState extends State<HomePage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(success ? '掃描已啟用並支援後台運行' : '掃描啟動失敗')),
     );
-    _scanSubscription = scanService?.beaconStream.listen((scannedBeacons) {
+    _scanSubscription = scanService.beaconStream.listen((scannedBeacons) {
       setState(() {
         _scannedBeacons = scannedBeacons;
         print("掃描到的已註冊 Beacons: $_scannedBeacons");
       });
     });
-    await scanService?.scanRegisteredBeacons(_BeaconsList); // 開始掃描
+    await scanService.scanRegisteredBeacons(_BeaconsList); // 開始掃描
   }
 
   // 停止掃描 Beacon
@@ -102,7 +97,7 @@ class _MainPageState extends State<HomePage>
     }); // 更新掃描按鈕的狀態
     _scanSubscription?.cancel();
     _scanSubscription = null;
-    scanService?.stopScanning();
+    scanService.stopScanning();
     await backgroundExecute.stopBackgroundExecute();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -178,6 +173,7 @@ class _MainPageState extends State<HomePage>
               _isScanning,
               _findBeaconByUUID,
               getList,
+              scanService,
             ),
             ManagePage(_BeaconsList, getList),
           ],
@@ -270,7 +266,7 @@ class ScanPage extends StatefulWidget {
   final bool isScanning;
   final Beacon? Function(String uuid) _findBeaconByUUID;
   final VoidCallback refreshCallback;
-  final ScanService? scanService;
+  final ScanService scanService;
 
   ScanPage(
       this._scannedBeacons,
@@ -278,7 +274,8 @@ class ScanPage extends StatefulWidget {
       this.isScanning,
       this._findBeaconByUUID,
       this.refreshCallback,
-      {this.scanService,super.key,}
+      this.scanService,
+      {super.key,}
       );
 
   @override
@@ -381,6 +378,19 @@ class _ScanPageState extends State<ScanPage> {
                         title: Text(beacon.item),
                         trailing: ElevatedButton(
                           onPressed: () {
+                            print("傳送到 SearchingPage 的資料:");
+                            print("Item Name: ${beacon.item}");
+                            print("Beacon ID: ${beacon.uuid}");
+                            print("Scanned Beacons: ${widget._scannedBeacons}");
+                            print("Beacon Stream: ${widget.scanService?.beaconStream}");
+
+                            if (widget.scanService == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('掃描服務尚未初始化，請啟動掃描')),
+                              );
+                              return;
+                            }
+
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -388,7 +398,7 @@ class _ScanPageState extends State<ScanPage> {
                                   itemName: beacon.item,
                                   beaconId: beacon.uuid,
                                   scannedBeacons: widget._scannedBeacons,
-                                  beaconStream: widget.scanService!.beaconStream,
+                                  beaconStream: widget.scanService.beaconStream,
                                 ),
                               ),
                             );
