@@ -37,12 +37,23 @@ class _MainPageState extends State<HomePage>
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChange);
     WidgetsBinding.instance.addObserver(this); // 監聽應用狀態
+
+    if (!Get.isRegistered<ScanService>()) {
+      scanService = ScanService(_BeaconsList);
+      Get.put(scanService!);
+    } else {
+      scanService = Get.find<ScanService>();
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this); // 移除狀態監聽
     _stopBeaconScanning(); // 停止掃描
+
+    if (Get.isRegistered<ScanService>()) {
+      Get.delete<ScanService>();
+    }
     super.dispose();
   }
 
@@ -67,7 +78,7 @@ class _MainPageState extends State<HomePage>
   // 開始掃描 Beacon
   void _startBeaconScanning() async {
     bool success = await backgroundExecute.initializeBackground();
-    scanService = Get.put(ScanService(_BeaconsList));
+
     setState(() {
       _isScanning = true;
     }); // 更新掃描按鈕的狀態
@@ -89,10 +100,9 @@ class _MainPageState extends State<HomePage>
       _isScanning = false;
       _scannedBeacons.clear();
     }); // 更新掃描按鈕的狀態
-    _scanSubscription?.cancel(); // 取消掃描訂閱
+    _scanSubscription?.cancel();
     _scanSubscription = null;
     scanService?.stopScanning();
-    scanService = null;
     await backgroundExecute.stopBackgroundExecute();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -281,7 +291,7 @@ class _ScanPageState extends State<ScanPage> {
   @override
   void initState() {
     super.initState();
-    scanService = widget.scanService ?? Get.put(ScanService(widget._BeaconsList));
+    scanService = widget.scanService ?? Get.find<ScanService>();
   }
 
   @override
@@ -302,7 +312,6 @@ class _ScanPageState extends State<ScanPage> {
       );
     }
 
-    // 當 scanService 為 null 時，避免出錯
     if (scanService == null) {
       return Center(
         child: const Text(
