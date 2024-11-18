@@ -8,9 +8,9 @@ class ScanService {
   late final StreamController<List<Map<String, dynamic>>> _beaconStreamController;
   final MissingEventService _missingEventService;
   StreamSubscription? _scanSubscription;
-  bool isDoorClose = false;
+  bool startMissingChecking = false;
 
-  static const double doorThresholdDistance = 1.0; // 門的距離閾值(m)
+  static const double doorThresholdDistance = 3.0; // 門的距離閾值(m)
 
   ScanService(RxList<db.Beacon> sharedBeaconsList): _missingEventService = MissingEventService(sharedBeaconsList) {
     _beaconStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
@@ -50,6 +50,7 @@ class ScanService {
     // 開始掃描並監聽掃描結果
     _scanSubscription = flutterBeacon.ranging(regions).listen((result) {
       List<Map<String, dynamic>> scannedBeacons = [];
+      bool doorBeaconDetected = false;
 
       for (var beacon in result.beacons) {
         final beaconId = beacon.proximityUUID;
@@ -66,16 +67,24 @@ class ScanService {
               'rssi': rssi,
             });
 
-            // 判斷是否為 "door beacon" 並且距離小於閾值
-            if (registeredBeacon.door == 1 && distance < doorThresholdDistance && !isDoorClose) {
-              print("遺失檢測啟動");
-              isDoorClose = true;
+            // 判斷是否為 "door beacon" 並且距離大於閾值
+            if (registeredBeacon.door == 1){
+              doorBeaconDetected = true;
+              if (distance > doorThresholdDistance && !startMissingChecking)
+                print("與門距離超過閾值，啟動遺失檢測");
+                startMissingChecking = true;
             }
           }
         }
       }
+      // 如果沒有發現 door beacon，則啟動遺失檢測（失去信號）
+      if (!doorBeaconDetected && !startMissingChecking) {
+        print("未檢測到門的信號，啟動遺失檢測");
+        startMissingChecking = true;
+      }
+
       _beaconStreamController.add(scannedBeacons);
-      if (isDoorClose) {
+      if (startMissingChecking) {
         _missingEventService.checkIfItemIsMissing(scannedBeacons);
       }
     });
@@ -118,7 +127,7 @@ class ScanService {
   Future<void> stopScanning() async {
     await _scanSubscription?.cancel(); // 正確取消訂閱
     _scanSubscription = null; // 重置訂閱
-    isDoorClose = false;
+    startMissingChecking = false;
   }
 
   void dispose() {

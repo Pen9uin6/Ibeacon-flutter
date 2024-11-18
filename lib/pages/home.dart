@@ -289,7 +289,7 @@ class _ScanPageState extends State<ScanPage> {
   @override
   void initState() {
     super.initState();
-    scanService = widget.scanService ?? Get.find<ScanService>();
+    scanService = widget.scanService;
   }
 
   @override
@@ -374,14 +374,14 @@ class _ScanPageState extends State<ScanPage> {
                           print("Item Name: ${beacon.item}");
                           print("Beacon ID: ${beacon.uuid}");
                           print("Scanned Beacons: ${widget._scannedBeacons}");
-                          print("Beacon Stream: ${widget.scanService?.beaconStream}");
+                          print("Beacon Stream: ${widget.scanService.beaconStream}");
 
-                          if (widget.scanService == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('掃描服務尚未初始化，請啟動掃描')),
-                            );
-                            return;
-                          }
+                          // if (widget.scanService == null) {
+                          //   ScaffoldMessenger.of(context).showSnackBar(
+                          //     const SnackBar(content: Text('掃描服務尚未初始化，請啟動掃描')),
+                          //   );
+                          //   return;
+                          // }
 
                           Navigator.push(
                             context,

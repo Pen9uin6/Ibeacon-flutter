@@ -18,7 +18,7 @@ class Beacon {
       'id': id,
       'uuid': uuid,
       'item': item,
-      'home': door,
+      'door': door,
       'isMissing': isMissing,
     };
   }

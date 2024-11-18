@@ -36,6 +36,10 @@ class MissingEventService {
     // Beacon全部遺失 全體+1並退出
     if (scannedBeaconIds.isEmpty) {
       for (var beacon in registeredBeacons) {
+        // 跳過 door beacon
+        if (beacon.door == 1) {
+          continue;
+        }
         _incrementMissingCount(beacon.uuid, beacon.item);
       }
       return;
@@ -43,7 +47,10 @@ class MissingEventService {
 
     // 檢查每一個已註冊的 Beacon
     for (var beacon in registeredBeacons) {
-
+      // 跳過 door beacon
+      if (beacon.door == 1) {
+        continue;
+      }
       if (scannedBeaconIds.contains(beacon.uuid)) {
         // 如果 Beacon 有掃描到
         var scannedBeacon = scannedBeacons.firstWhere((b) => b['uuid'] == beacon.uuid);
@@ -52,13 +59,13 @@ class MissingEventService {
         if (distance > missingThreshold) {
           _incrementMissingCount(beacon.uuid, beacon.item);
         }
-        else {
+        else{
           // 如果距離正常，重置計數
           _missingCounts[beacon.uuid] = 0;
           _updateBeaconMissingStatus(beacon.uuid, 0);
         }
       }
-      else {
+      else{
         // 如果 Beacon 沒有掃描到，計算為信號消失
         _incrementMissingCount(beacon.uuid, beacon.item);
       }
