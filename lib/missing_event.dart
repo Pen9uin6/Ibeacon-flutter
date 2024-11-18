@@ -83,7 +83,7 @@ class MissingEventService {
     db.Beacon? beacon = await db.BeaconDB.getBeaconByUUID(beaconId);
     if (beacon != null) {
       if (beacon.isMissing != isMissing) {
-        beacon = beacon.copyWith(isMissing: isMissing);
+        beacon.isMissing = isMissing;
         await db.BeaconDB.update(beacon);
 
         // 找到對應的 Beacon 並更新 RxList

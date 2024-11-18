@@ -8,12 +8,28 @@ class ScanService {
   late final StreamController<List<Map<String, dynamic>>> _beaconStreamController;
   final MissingEventService _missingEventService;
   StreamSubscription? _scanSubscription;
+  bool isDoorClose = false;
+
+  static const double doorThresholdDistance = 1.0; // 門的距離閾值(m)
 
   ScanService(RxList<db.Beacon> sharedBeaconsList): _missingEventService = MissingEventService(sharedBeaconsList) {
     _beaconStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
+    _resetAllBeaconsMissingStatus(sharedBeaconsList);
   }
 
   Stream<List<Map<String, dynamic>>> get beaconStream => _beaconStreamController.stream;
+
+// 重置所有 Beacon 的 isMissing 狀態為 false
+  Future<void> _resetAllBeaconsMissingStatus(RxList<db.Beacon> beaconsList) async {
+    for (var beacon in beaconsList) {
+      if (beacon.isMissing == 1) {
+        beacon.isMissing = 0;
+
+        // 更新數據庫中的狀態
+        await db.BeaconDB.update(beacon);
+      }
+    }
+  }
 
   // 掃描已註冊beacon
   Future<void>scanRegisteredBeacons(RxList<db.Beacon> registeredBeacons) async {
@@ -42,17 +58,26 @@ class ScanService {
 
         if (distance > 0){
           // 檢查該 Beacon 是否在已註冊的 Beacon 中
-          if (registeredBeacons.any((b) => b.uuid == beaconId)) {
+          final registeredBeacon = registeredBeacons.firstWhereOrNull((b) => b.uuid == beaconId);
+          if (registeredBeacon != null) {
             scannedBeacons.add({
               'uuid': beaconId,
               'distance': distance,
               'rssi': rssi,
-            });;
+            });
+
+            // 判斷是否為 "door beacon" 並且距離小於閾值
+            if (registeredBeacon.door == 1 && distance < doorThresholdDistance && !isDoorClose) {
+              print("遺失檢測啟動");
+              isDoorClose = true;
+            }
           }
         }
       }
       _beaconStreamController.add(scannedBeacons);
-      _missingEventService.checkIfItemIsMissing(scannedBeacons);
+      if (isDoorClose) {
+        _missingEventService.checkIfItemIsMissing(scannedBeacons);
+      }
     });
   }
 
@@ -75,7 +100,7 @@ class ScanService {
       for (var beacon in result.beacons) {
         final beaconId = beacon.proximityUUID;
         final rssi = beacon.rssi.toDouble();
-        final distance = beacon.accuracy; // 使用 flutter_beacon 提供的距離模型
+        final distance = beacon.accuracy;
 
         if (distance > 0) {
           scannedBeacons.add({
@@ -93,6 +118,7 @@ class ScanService {
   Future<void> stopScanning() async {
     await _scanSubscription?.cancel(); // 正確取消訂閱
     _scanSubscription = null; // 重置訂閱
+    isDoorClose = false;
   }
 
   void dispose() {

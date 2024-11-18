@@ -486,9 +486,8 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
             TextButton(
               onPressed: () async {
                 if (renameController.text.isNotEmpty) {
-                  Beacon updatedBeacon =
-                      beacon.copyWith(item: renameController.text);
-                  await BeaconDB.update(updatedBeacon);
+                  beacon.item = renameController.text;
+                  await BeaconDB.update(beacon);
                   getList();
                 }
                 Navigator.of(context).pop();
@@ -503,9 +502,11 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
 
   // is/isnt the door one
   void _toggleDoorStatus(Beacon beacon) async {
-    Beacon updatedBeacon = beacon.copyWith(door: beacon.door == 1 ? 0 : 1);
-    await BeaconDB.update(updatedBeacon);
-    getList();
+    beacon.door = beacon.door == 1 ? 0 : 1;
+    await BeaconDB.update(beacon);
+    Future.delayed(Duration(milliseconds: 500), () {
+      getList();
+    });
   }
 
   // Delete Beacon

@@ -5,13 +5,13 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
 
 class Beacon {
-  final String id; // 此存取id
-  final String uuid; // iBeacon UUID
-  final String item; // 與此UUID綁定的物品名稱
-  final int? door; // 是否是門口那顆
-  final int isMissing; // 是否遺失
+  String id; // 此存取id
+  String uuid; // iBeacon UUID
+  String item; // 與此UUID綁定的物品名稱
+  int? door; // 是否是門口那顆
+  int isMissing; // 是否遺失
 
-  Beacon({ required this.id, required this.uuid, this.item = '', this.door, required this.isMissing});
+  Beacon({ required this.id, required this.uuid, this.item = '', this.door, this.isMissing = 0});
 
   Map<String, dynamic> toMap() {
     return {
@@ -21,22 +21,6 @@ class Beacon {
       'home': door,
       'isMissing': isMissing,
     };
-  }
-
-  Beacon copyWith({
-    String? id,
-    String? uuid,
-    String? item,
-    int? door,
-    int? isMissing,
-  }) {
-    return Beacon(
-      id: id ?? this.id,
-      uuid: uuid ?? this.uuid,
-      item: item ?? this.item,
-      door: door ?? this.door,
-      isMissing: isMissing ?? this.isMissing,
-    );
   }
 
   @override
