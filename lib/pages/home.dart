@@ -293,7 +293,7 @@ class _ScanPageState extends State<ScanPage> {
     scanService = widget.scanService;
   }
 
-  @override
+
   @override
   Widget build(BuildContext context) {
     if (!widget.isScanning) {
@@ -302,7 +302,7 @@ class _ScanPageState extends State<ScanPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              '啟動掃描以檢視裝置資訊',
+              'Activate scanning to view device information',
               style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
             const SizedBox(height: 16.0),
@@ -310,103 +310,97 @@ class _ScanPageState extends State<ScanPage> {
         ),
       );
     }
-    return Obx((){
+
+    return Obx(() {
       final doorBeacons = widget._scannedBeacons
-          .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 1 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
+          .where((b) =>
+      widget._findBeaconByUUID(b['uuid'])?.door == 1 &&
+          widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
           .toList();
-      final notdoorBeacons = widget._scannedBeacons
-          .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 0 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
+      final itemBeacons = widget._scannedBeacons
+          .where((b) =>
+      widget._findBeaconByUUID(b['uuid'])?.door == 0 &&
+          widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
           .toList();
       final missingBeacons = widget._BeaconsList
-          .where((b) => b.door == 0  && b.isMissing == 1)
+          .where((b) => b.door == 0 && b.isMissing == 1)
           .toList();
 
       return Scaffold(
-        body: Column(
-          children: <Widget>[
-            Expanded(
-              child: ListView(
-                children: [
-                  //door區
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text('Door',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
-                  ...doorBeacons.map((beacon) {
-                    final Beacon? dbBeacon =
-                    widget._findBeaconByUUID(beacon['uuid']);
-                    return ListTile(
-                      title: Text('${dbBeacon?.item}'),
-                      subtitle: Text(
-                          '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
-                    );
-                  }).toList(),
-                  //item區
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text('Item',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
-                  ...notdoorBeacons.map((beacon) {
-                    final Beacon? dbBeacon =
-                    widget._findBeaconByUUID(beacon['uuid']);
-                    return ListTile(
-                      title: Text('${dbBeacon?.item}'),
-                      subtitle: Text(
-                          '距離: ${beacon['distance'].toStringAsFixed(2)} m'),
-                    );
-                  }).toList(),
-                  //missing區
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text('Missing',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
-                  ...missingBeacons.map((beacon) {
-                    return ListTile(
-                      title: Text(beacon.item),
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                          print("傳送到 SearchingPage 的資料:");
-                          print("Item Name: ${beacon.item}");
-                          print("Beacon ID: ${beacon.uuid}");
-                          print("Scanned Beacons: ${widget._scannedBeacons}");
-                          print("Beacon Stream: ${widget.scanService.beaconStream}");
-
-                          // if (widget.scanService == null) {
-                          //   ScaffoldMessenger.of(context).showSnackBar(
-                          //     const SnackBar(content: Text('掃描服務尚未初始化，請啟動掃描')),
-                          //   );
-                          //   return;
-                          // }
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SearchingPage(
-                                itemName: beacon.item,
-                                beaconId: beacon.uuid,
-                                scannedBeacons: widget._scannedBeacons,
-                                beaconStream: widget.scanService.beaconStream,
-                              ),
-                            ),
-                          );
-                          },
-                        child: const Text('尋物'),
-                      ),
-                    );
-                  }).toList(),
-                ],
-              ),
-            ),
-          ],
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildBeaconSection('Door Beacons', doorBeacons, Colors.blue),
+              const Divider(),
+              _buildBeaconSection('Item Beacons', itemBeacons, Colors.green),
+              const Divider(),
+              _buildBeaconSection('Missing Beacons', missingBeacons, Colors.red),
+            ],
+          ),
         ),
       );
     });
+  }
+
+  Widget _buildBeaconSection(
+      String title, List<dynamic> beacons, Color color) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 8.0),
+          ...beacons.map((beacon) {
+            final Beacon? dbBeacon = beacon is Beacon
+                ? beacon
+                : widget._findBeaconByUUID(beacon['uuid']);
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 4.0),
+              child: ListTile(
+                leading: Icon(
+                  title == 'Door Beacons'
+                      ? Icons.door_front_door
+                      : title == 'Item Beacons'
+                      ? Icons.local_offer
+                      : Icons.help_outline,
+                  color: title == 'Missing Beacons' ? Colors.red : color,
+                ),
+                title: Text(dbBeacon?.item ?? 'Unknown'),
+                subtitle: Text(
+                    'Distance: ${beacon is Beacon ? 'N/A' : beacon['distance']?.toStringAsFixed(2) ?? 'N/A'} m'),
+                trailing: title == 'Missing Beacons'
+                    ? ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SearchingPage(
+                          itemName: dbBeacon?.item ?? '',
+                          beaconId: dbBeacon?.uuid ?? '',
+                          scannedBeacons: widget._scannedBeacons,
+                          beaconStream: widget.scanService.beaconStream,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Find'),
+                )
+                    : null,
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
   }
 }
 
@@ -539,46 +533,55 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: ListView(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
               'Manage Registered Beacons',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-          ),
-          ..._BeaconsList.map((beacon) {
-            return ListTile(
-              title: Text(beacon.item),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('UUID: ${beacon.uuid}'),
-                  Text('Door: ${beacon.door == 1 ? "Yes" : "No"}'),
-                ],
+            const SizedBox(height: 8.0),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _BeaconsList.length,
+                itemBuilder: (context, index) {
+                  final beacon = _BeaconsList[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: ListTile(
+                      leading: Icon(
+                        beacon.door == 1 ? Icons.door_front_door : Icons.local_offer,
+                        color: beacon.door == 1 ? Colors.blue : Colors.green,
+                      ),
+                      title: Text(beacon.item),
+                      subtitle: Text('UUID: ${beacon.uuid}'),
+                      trailing: PopupMenuButton<ExtraAction>(
+                        onSelected: (action) =>
+                            onSelectExtraAction(context, action, beacon),
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: ExtraAction.edit,
+                            child: Text('Rename'),
+                          ),
+                          const PopupMenuItem(
+                            value: ExtraAction.toggleDoor,
+                            child: Text('Toggle Door'),
+                          ),
+                          const PopupMenuItem(
+                            value: ExtraAction.delete,
+                            child: Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-              trailing: PopupMenuButton<ExtraAction>(
-                onSelected: (action) =>
-                    onSelectExtraAction(context, action, beacon),
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: ExtraAction.edit,
-                    child: Text('Rename the Beacon'),
-                  ),
-                  const PopupMenuItem(
-                    value: ExtraAction.toggleDoor,
-                    child: Text('Toggle Door Status'),
-                  ),
-                  const PopupMenuItem(
-                    value: ExtraAction.delete,
-                    child: Text('Delete'),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
