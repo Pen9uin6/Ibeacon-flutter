@@ -53,7 +53,7 @@ class BeaconDB {
 
   Future _onCreate(Database db, int version) async {
     await db.execute(
-        'CREATE TABLE Beacons(id TEXT PRIMARY KEY, uuid TEXT, item TEXT, home INTEGER, isMissing INTEGER)');
+        'CREATE TABLE Beacons(id TEXT PRIMARY KEY, uuid TEXT, item TEXT, door INTEGER, isMissing INTEGER)');
   }
 
   static Future<int> insert(Beacon beacon) async {
