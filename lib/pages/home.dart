@@ -310,10 +310,10 @@ class _ScanPageState extends State<ScanPage> {
       );
     }
     return Obx((){
-      final homeBeacons = widget._scannedBeacons
+      final doorBeacons = widget._scannedBeacons
           .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 1 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
           .toList();
-      final nothomeBeacons = widget._scannedBeacons
+      final notdoorBeacons = widget._scannedBeacons
           .where((b) => widget._findBeaconByUUID(b['uuid'])?.door == 0 && widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
           .toList();
       final missingBeacons = widget._BeaconsList
@@ -333,7 +333,7 @@ class _ScanPageState extends State<ScanPage> {
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
-                  ...homeBeacons.map((beacon) {
+                  ...doorBeacons.map((beacon) {
                     final Beacon? dbBeacon =
                     widget._findBeaconByUUID(beacon['uuid']);
                     return ListTile(
@@ -349,7 +349,7 @@ class _ScanPageState extends State<ScanPage> {
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
-                  ...nothomeBeacons.map((beacon) {
+                  ...notdoorBeacons.map((beacon) {
                     final Beacon? dbBeacon =
                     widget._findBeaconByUUID(beacon['uuid']);
                     return ListTile(

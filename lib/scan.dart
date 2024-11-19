@@ -24,8 +24,6 @@ class ScanService {
     for (var beacon in beaconsList) {
       if (beacon.isMissing == 1) {
         beacon.isMissing = 0;
-
-        // 更新數據庫中的狀態
         await db.BeaconDB.update(beacon);
       }
     }

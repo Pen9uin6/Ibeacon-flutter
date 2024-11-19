@@ -134,7 +134,7 @@ class _EditPageState extends State<EditPage> {
                       });
                     },
                   ),
-                  const Text('Mark as Home'),
+                  const Text('Mark as Door'),
                 ],
               ),
             ],

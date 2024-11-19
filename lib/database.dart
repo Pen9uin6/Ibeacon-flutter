@@ -102,7 +102,7 @@ class BeaconDB {
         id: maps[i]['id'],
         uuid: maps[i]['uuid'],
         item: maps[i]['item'],
-        door: maps[i]['home'],
+        door: maps[i]['door'],
         isMissing: maps[i]['isMissing']
       );
     });
@@ -121,7 +121,7 @@ class BeaconDB {
         id: maps.first['id'],
         uuid: maps.first['uuid'],
         item: maps.first['item'],
-        door: maps.first['home'],
+        door: maps.first['door'],
         isMissing: maps.first['isMissing'],
       );
     }
