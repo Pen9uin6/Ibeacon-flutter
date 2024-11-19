@@ -362,7 +362,7 @@ class _ScanPageState extends State<ScanPage> {
           ...beacons.map((beacon) {
             final Beacon? dbBeacon = beacon is Beacon
                 ? beacon
-                : widget._findBeaconByUUID(beacon['uuid']);
+                : widget._findBeaconByUUID(beacon.uuid);
             return Card(
               margin: const EdgeInsets.symmetric(vertical: 4.0),
               child: ListTile(
