@@ -73,6 +73,7 @@ class _MainPageState extends State<HomePage>
 
   // 開始掃描 Beacon
   void _startBeaconScanning() async {
+    getList();
     bool success = await backgroundExecute.initializeBackground();
 
     setState(() {
@@ -87,7 +88,7 @@ class _MainPageState extends State<HomePage>
         print("掃描到的已註冊 Beacons: $_scannedBeacons");
       });
     });
-    await scanService.scanRegisteredBeacons(_BeaconsList); // 開始掃描
+    await scanService.scanRegisteredBeacons(_BeaconsList, getList); // 開始掃描
   }
 
   // 停止掃描 Beacon

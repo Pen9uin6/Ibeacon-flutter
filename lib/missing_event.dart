@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:test/database.dart' as db;
 import 'package:get/get.dart';
 import 'package:test/pages/home.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class MissingEventService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -9,6 +10,7 @@ class MissingEventService {
   final Map<String, int> _missingCounts = {};
   List<db.Beacon> registeredBeacons = [];
   final RxList<db.Beacon> _BeaconsList;
+  final AudioPlayer player = AudioPlayer();
 
   MissingEventService(this._BeaconsList) {
     _initializeNotifications();
@@ -109,6 +111,8 @@ class MissingEventService {
 
   // 發送物品遺失通知
   Future<void> _sendMissingNotification(String beaconId, String item) async {
+    player.play(AssetSource('sound_effects/alert.wav'));
+
     await showNotification(
       id: beaconId.hashCode,
       title: '物品遺失警告',
@@ -159,6 +163,18 @@ class MissingEventService {
       // });
 
       Get.offAllNamed('pages/home'); // 移除所有頁面並導航到主頁
+    }
+  }
+
+  // 重置所有 Beacon 的 isMissing 狀態為 false, 清空計數器
+  Future<void> resetAllBeaconsMissingStatus(RxList<db.Beacon> beaconsList) async {
+    for (var beacon in beaconsList) {
+      if (beacon.isMissing == 1) {
+        beacon.isMissing = 0;
+        await db.BeaconDB.update(beacon);
+      }
+      // 重置所有 Beacon 的遺失計數器為零
+      _missingCounts[beacon.uuid] = 0;
     }
   }
 
