@@ -3,6 +3,8 @@ import "edit_beacon.dart";
 import 'package:test/database.dart';
 import 'package:test/background.dart';
 import 'package:test/scan.dart';
+import 'package:test/pages/daily.dart';
+import 'package:test/pages/group.dart';
 import 'package:test/pages/searching.dart';
 import 'package:test/requirement_state_controller.dart';
 import 'package:get/get.dart';
@@ -233,11 +235,29 @@ class _MainPageState extends State<HomePage>
               //     color: Colors.blueGrey,
               //   ),
               // ),
+              // ListTile(
+              //   title: const Text("Sign out"),
+              //   onTap: () {
+              //     Navigator.pushNamedAndRemoveUntil(
+              //         context, "/", (route) => false);
+              //   },
+              // ),
               ListTile(
-                title: const Text("Sign out"),
+                title: const Text("日常提醒"),
                 onTap: () {
-                  Navigator.pushNamedAndRemoveUntil(
-                      context, "/", (route) => false);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => DailyPage()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text("我的群組"),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => GroupPage()),
+                  );
                 },
               ),
               const Spacer(),
@@ -314,13 +334,13 @@ class _ScanPageState extends State<ScanPage> {
     return Obx(() {
       final doorBeacons = widget._scannedBeacons
           .where((b) =>
-      widget._findBeaconByUUID(b['uuid'])?.door == 1 &&
-          widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
+      widget._findBeaconByUUID(b['uuid'] as String)?.door == 1 &&
+          widget._findBeaconByUUID(b['uuid'] as String)?.isMissing == 0)
           .toList();
       final itemBeacons = widget._scannedBeacons
           .where((b) =>
-      widget._findBeaconByUUID(b['uuid'])?.door == 0 &&
-          widget._findBeaconByUUID(b['uuid'])?.isMissing == 0)
+      widget._findBeaconByUUID(b['uuid'] as String)?.door == 0 &&
+          widget._findBeaconByUUID(b['uuid'] as String)?.isMissing == 0)
           .toList();
       final missingBeacons = widget._BeaconsList
           .where((b) => b.door == 0 && b.isMissing == 1)
