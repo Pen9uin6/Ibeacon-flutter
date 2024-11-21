@@ -4,7 +4,7 @@ import 'package:test/database.dart';
 import 'package:test/background.dart';
 import 'package:test/scan.dart';
 import 'package:test/pages/daily.dart';
-import 'package:test/pages/group.dart';
+import 'package:test/pages/group_page.dart';
 import 'package:test/pages/searching.dart';
 import 'package:test/requirement_state_controller.dart';
 import 'package:get/get.dart';
@@ -155,8 +155,8 @@ class _MainPageState extends State<HomePage>
           title: const TabBar(
             labelPadding: EdgeInsets.zero,
             tabs: <Widget>[
-              Tab(text: "Scan"),
-              Tab(text: "Manage"),
+              Tab(text: "裝置掃描"),
+              Tab(text: "裝置管理"),
             ],
           ),
           actions: <Widget>[
@@ -197,8 +197,7 @@ class _MainPageState extends State<HomePage>
             verticalDirection: VerticalDirection.down,
             children: <Widget>[
               ListTile(
-                title: const Text("User Name"),
-                subtitle: const Text("123123"),
+                title: const Text("謝昕燁"),
                 tileColor: Colors.blueGrey,
                 titleTextStyle: TextStyle(
                   color: Colors.white,
@@ -263,7 +262,7 @@ class _MainPageState extends State<HomePage>
               const Spacer(),
               const Divider(),
               ListTile(
-                title: const Text("Home"),
+                title: const Text("回到主畫面"),
                 onTap: () {
                   Navigator.pushNamedAndRemoveUntil(
                       context, "/", (route) => false);
@@ -322,7 +321,7 @@ class _ScanPageState extends State<ScanPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              'Activate scanning to view device information',
+              '啟動掃描以查看裝置資訊',
               style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
             const SizedBox(height: 16.0),
@@ -351,11 +350,11 @@ class _ScanPageState extends State<ScanPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildBeaconSection('Door Beacons', doorBeacons, Colors.blue),
+              _buildBeaconSection('Beacons - 門', doorBeacons, Colors.blue),
               const Divider(),
-              _buildBeaconSection('Item Beacons', itemBeacons, Colors.green),
+              _buildBeaconSection('Beacons - 物品', itemBeacons, Colors.green),
               const Divider(),
-              _buildBeaconSection('Missing Beacons', missingBeacons, Colors.red),
+              _buildBeaconSection('Beacons - 遺失物品', missingBeacons, Colors.red),
             ],
           ),
         ),
@@ -387,17 +386,19 @@ class _ScanPageState extends State<ScanPage> {
               margin: const EdgeInsets.symmetric(vertical: 4.0),
               child: ListTile(
                 leading: Icon(
-                  title == 'Door Beacons'
+                  title == 'Beacons - 門'
                       ? Icons.door_front_door
-                      : title == 'Item Beacons'
+                      : title == 'Beacons - 物品'
                       ? Icons.local_offer
                       : Icons.help_outline,
-                  color: title == 'Missing Beacons' ? Colors.red : color,
+                  color: title == 'Beacons - 遺失物品' ? Colors.red : color,
                 ),
                 title: Text(dbBeacon?.item ?? 'Unknown'),
-                subtitle: Text(
-                    'Distance: ${beacon is Beacon ? 'N/A' : beacon['distance']?.toStringAsFixed(2) ?? 'N/A'} m'),
-                trailing: title == 'Missing Beacons'
+                subtitle: title == 'Beacons - 遺失物品'
+                    ? null // 移除遺失物品區域的距離顯示
+                    : Text(
+                  'Distance: ${beacon is Beacon ? 'N/A' : beacon['distance']?.toStringAsFixed(2) ?? 'N/A'} m',),
+                trailing: title == 'Beacons - 遺失物品'
                     ? ElevatedButton(
                   onPressed: () {
                     Navigator.push(
@@ -412,7 +413,7 @@ class _ScanPageState extends State<ScanPage> {
                       ),
                     );
                   },
-                  child: const Text('Find'),
+                  child: const Text('尋找'),
                 )
                     : null,
               ),
@@ -481,14 +482,14 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Rename the Beacon"),
+          title: const Text("重新命名 Beacon"),
           content: TextField(
             controller: renameController,
             decoration: const InputDecoration(
               labelStyle: TextStyle(color: Colors.black),
-              labelText: "Enter new name",
+              labelText: "輸入新的名稱",
               hintStyle: TextStyle(color: Colors.grey),
-              hintText: "New Beacon Name",
+              hintText: "新的名稱",
             ),
           ),
           actions: [
@@ -559,7 +560,7 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Manage Registered Beacons',
+              '管理已註冊的Beacon',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8.0),
@@ -583,15 +584,15 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
                         itemBuilder: (context) => [
                           const PopupMenuItem(
                             value: ExtraAction.edit,
-                            child: Text('Rename'),
+                            child: Text('重新命名'),
                           ),
                           const PopupMenuItem(
                             value: ExtraAction.toggleDoor,
-                            child: Text('Toggle Door'),
+                            child: Text('標記為"門"'),
                           ),
                           const PopupMenuItem(
                             value: ExtraAction.delete,
-                            child: Text('Delete'),
+                            child: Text('刪除'),
                           ),
                         ],
                       ),

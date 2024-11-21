@@ -56,10 +56,10 @@ class myApp extends StatelessWidget {
       },
       onGenerateRoute: (settings) {
         switch (settings.name) {
-          case GitmeRebornRoutes.root:
-            return MaterialPageRoute(
-              builder: (context) => WelcomePage(),
-            );
+          // case GitmeRebornRoutes.root:
+          //   return MaterialPageRoute(
+          //     builder: (context) => WelcomePage(),
+          //   );
           default:
             return MaterialPageRoute(
               builder: (context) => HomePage(),

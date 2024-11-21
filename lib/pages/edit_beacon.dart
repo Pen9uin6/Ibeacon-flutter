@@ -92,7 +92,7 @@ class _EditPageState extends State<EditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add a Beacon'),
+        title: const Text('添加新beacon'),
         actions: [
           IconButton(
             onPressed: onSaveButtonPressed,
@@ -109,9 +109,9 @@ class _EditPageState extends State<EditPage> {
               TextFormField(
                 controller: itemController,
                 decoration: InputDecoration(
-                  labelText: 'item:',
+                  labelText: '物品:',
                   labelStyle: TextStyle(color: Colors.black),
-                  hintText: 'Enter the name of item',
+                  hintText: '輸入物品名稱',
                   hintStyle: TextStyle(color: Colors.grey),
                 ),
               ),
@@ -120,7 +120,7 @@ class _EditPageState extends State<EditPage> {
                 decoration: const InputDecoration(
                   labelText: 'iBeacon UUID:',
                   labelStyle: TextStyle(color: Colors.black),
-                  hintText: 'Enter the UUID of iBeacon',
+                  hintText: '輸入Beacon的UUID',
                   hintStyle: TextStyle(color: Colors.grey),
                 ),
               ),
@@ -134,7 +134,7 @@ class _EditPageState extends State<EditPage> {
                       });
                     },
                   ),
-                  const Text('Mark as Door'),
+                  const Text('標記為"門"'),
                 ],
               ),
             ],

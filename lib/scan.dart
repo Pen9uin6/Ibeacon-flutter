@@ -10,7 +10,7 @@ class ScanService {
   StreamSubscription? _scanSubscription;
   bool startMissingChecking = false;
 
-  static const double doorThresholdDistance = 3.0; // 門的距離閾值(m)
+  static const double doorThresholdDistance = 1.0; // 門的距離閾值(m)
 
   ScanService(RxList<db.Beacon> sharedBeaconsList): _missingEventService = MissingEventService(sharedBeaconsList) {
     _beaconStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
@@ -27,11 +27,11 @@ class ScanService {
       print("初始化失敗: $e");
       return;
     }
-    // 重置所有已註冊 Beacon 的狀態
-    await _missingEventService.resetAllBeaconsMissingStatus(registeredBeacons);
 
-    // 更新已註冊的 Beacon 列表
-    _missingEventService.updateRegisteredBeacons(registeredBeacons);
+    int DistanceCheckingCounter = 0; // 距離條件計數器(防意外達成條件)
+    int UndetectCounter = 0; // 失去信號計數器(房短時間失去信號)
+    await _missingEventService.resetAllBeaconsMissingStatus(registeredBeacons);  // 重置所有已註冊 Beacon 的狀態
+    _missingEventService.updateRegisteredBeacons(registeredBeacons);     // 更新已註冊的 Beacon 列表
 
     // 設置掃描區域
     final regions = <Region>[Region(identifier: 'com.beacon')];
@@ -58,12 +58,16 @@ class ScanService {
               'rssi': rssi,
             });
 
-            // 判斷是否為 "door beacon" 並且距離大於閾值
+            // 判斷是否為 "door beacon" 並且距離小於閾值
             if (registeredBeacon.door == 1){
               doorBeaconDetected = true;
-              if (distance > doorThresholdDistance && !startMissingChecking) {
-                print("與門距離超過閾值，啟動遺失檢測");
-                startMissingChecking = true;
+              if (distance < doorThresholdDistance && !startMissingChecking) {
+                DistanceCheckingCounter++;
+                print("與door距離小於閥值, 當前次數:${DistanceCheckingCounter}");
+                if(DistanceCheckingCounter > 3){ // 距離小於閥值超過三次啟動檢查
+                  print("使用者即將出門，啟動遺失檢測");
+                  startMissingChecking = true;
+                }
               }
             }
           }
@@ -71,9 +75,13 @@ class ScanService {
       }
       // 如果沒有發現 door beacon，則啟動遺失檢測（失去信號）
       if (!doorBeaconDetected && !startMissingChecking) {
-        print("未檢測到門的信號，啟動遺失檢測");
-        doorBeaconDetected = false;
-        startMissingChecking = true;
+        UndetectCounter++;
+        print("door信號丟失, 當前次數:${UndetectCounter}");
+        if(UndetectCounter > 3){ // 失去信號超過三次啟動檢查
+          print("未檢測到門的信號，啟動遺失檢測");
+          doorBeaconDetected = false;
+          startMissingChecking = true;
+        }
       }
       // 發送掃描到的 Beacon 資料
       _beaconStreamController.add(scannedBeacons);
