@@ -154,6 +154,9 @@ class _MainPageState extends State<HomePage>
           titleSpacing: 0.0,
           title: const TabBar(
             labelPadding: EdgeInsets.zero,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.black,
+            indicatorColor: Colors.white,
             tabs: <Widget>[
               Tab(text: "裝置掃描"),
               Tab(text: "裝置管理"),
@@ -162,12 +165,15 @@ class _MainPageState extends State<HomePage>
           actions: <Widget>[
             IconButton(
               icon: Icon(
-                  _isScanning ? Icons.stop : Icons.play_arrow), // 啟用後台掃描的按鈕
+                _isScanning ? Icons.stop : Icons.play_arrow,
+                color: Colors.white,
+              ),
               onPressed: () {
                 _isScanning ? _stopBeaconScanning() : _startBeaconScanning();
               },
             )
           ],
+          backgroundColor: Colors.teal,
         ),
         body: TabBarView(
           children: <Widget>[
@@ -183,65 +189,27 @@ class _MainPageState extends State<HomePage>
           ],
         ),
         drawer: Drawer(
-          //  child: ListView(
-          //   padding: EdgeInsets.zero,
-
-          //   children: <Widget>[
-          //     const DrawerHeader(
-          //       decoration: BoxDecoration(
-          //         color: Colors.blueGrey,
-          //       ),
-          //       child: Text("User Name"),
-          //   ]
           child: Column(
             verticalDirection: VerticalDirection.down,
             children: <Widget>[
-              ListTile(
-                title: const Text("謝昕燁"),
-                tileColor: Colors.blueGrey,
-                titleTextStyle: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20.0,
+              UserAccountsDrawerHeader(
+                accountName: const Text("謝昕燁",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                accountEmail: null,
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: Text(
+                    "謝",
+                    style: TextStyle(
+                        fontSize: 40, fontWeight: FontWeight.bold, color: Colors.teal),
+                  ),
                 ),
-                subtitleTextStyle: TextStyle(
-                  color: const Color.fromARGB(255, 228, 217, 217),
-                  fontSize: 16.0,
+                decoration: BoxDecoration(
+                  color: Colors.teal,
                 ),
-                minTileHeight: 60.0,
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
-                titleAlignment: ListTileTitleAlignment.center,
               ),
-              // const DrawerHeader(
-              //   decoration: BoxDecoration(
-              //     color: Colors.blueGrey,
-              //   ),
-              //   child: Text("User Name"),
-              // ),
-              // UserAccountsDrawerHeader(
-              //   accountName: const Text("User Name"),
-              //   accountEmail: null,
-              //   currentAccountPicture: null,
-              //   // currentAccountPicture: CircleAvatar(
-              //   //   backgroundColor: Colors.white,
-              //   //   child: Text(
-              //   //     "U",
-              //   //     style: TextStyle(fontSize: 40.0),
-              //   //   ),
-              //   // ),
-              //   margin: const EdgeInsets.only(bottom: 0.0),
-              //   decoration: BoxDecoration(
-              //     color: Colors.blueGrey,
-              //   ),
-              // ),
-              // ListTile(
-              //   title: const Text("Sign out"),
-              //   onTap: () {
-              //     Navigator.pushNamedAndRemoveUntil(
-              //         context, "/", (route) => false);
-              //   },
-              // ),
               ListTile(
+                leading: Icon(Icons.notifications, color: Colors.teal),
                 title: const Text("日常提醒"),
                 onTap: () {
                   Navigator.push(
@@ -251,6 +219,7 @@ class _MainPageState extends State<HomePage>
                 },
               ),
               ListTile(
+                leading: Icon(Icons.group, color: Colors.teal),
                 title: const Text("我的群組"),
                 onTap: () {
                   Navigator.push(
@@ -259,10 +228,11 @@ class _MainPageState extends State<HomePage>
                   );
                 },
               ),
-              const Spacer(),
-              const Divider(),
+              Spacer(),
+              Divider(),
               ListTile(
-                title: const Text("回到主畫面"),
+                leading: Icon(Icons.exit_to_app, color: Colors.red),
+                title: const Text("登出"),
                 onTap: () {
                   Navigator.pushNamedAndRemoveUntil(
                       context, "/", (route) => false);
@@ -274,8 +244,8 @@ class _MainPageState extends State<HomePage>
         floatingActionButton: FloatingActionButton(
           onPressed: onAdd,
           child: const Icon(Icons.add),
+          backgroundColor: Colors.teal,
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
@@ -393,7 +363,7 @@ class _ScanPageState extends State<ScanPage> {
                       : Icons.help_outline,
                   color: title == 'Beacons - 遺失物品' ? Colors.red : color,
                 ),
-                title: Text(dbBeacon?.item ?? 'Unknown'),
+                title: Text(dbBeacon?.item ?? 'Unknown', style:const TextStyle(fontWeight: FontWeight.bold),),
                 subtitle: title == 'Beacons - 遺失物品'
                     ? null // 移除遺失物品區域的距離顯示
                     : Text(
@@ -555,28 +525,32 @@ class _ManagePageState extends State<ManagePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '管理已註冊的Beacon',
+            Text(
+              "已註冊的 Beacon",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8.0),
+            SizedBox(height: 16.0),
             Expanded(
               child: ListView.builder(
                 itemCount: _BeaconsList.length,
                 itemBuilder: (context, index) {
                   final beacon = _BeaconsList[index];
                   return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4.0),
+                    elevation: 3,
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
                     child: ListTile(
                       leading: Icon(
-                        beacon.door == 1 ? Icons.door_front_door : Icons.local_offer,
+                        beacon.door == 1
+                            ? Icons.door_front_door
+                            : Icons.local_offer,
                         color: beacon.door == 1 ? Colors.blue : Colors.green,
                       ),
-                      title: Text(beacon.item),
+                      title: Text(beacon.item,
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text('UUID: ${beacon.uuid}'),
                       trailing: PopupMenuButton<ExtraAction>(
                         onSelected: (action) =>

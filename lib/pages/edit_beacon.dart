@@ -92,7 +92,8 @@ class _EditPageState extends State<EditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('添加新beacon'),
+        title: const Text('添加新 Beacon'),
+        backgroundColor: Colors.teal,
         actions: [
           IconButton(
             onPressed: onSaveButtonPressed,
@@ -101,40 +102,54 @@ class _EditPageState extends State<EditPage> {
         ],
       ),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(30),
+        child: Container(
+          padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text(
+                '編輯 Beacon 資料',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: itemController,
-                decoration: InputDecoration(
-                  labelText: '物品:',
+                decoration: const InputDecoration(
+                  labelText: '物品名稱',
                   labelStyle: TextStyle(color: Colors.black),
-                  hintText: '輸入物品名稱',
+                  hintText: '請輸入物品名稱',
                   hintStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: uuidController,
                 decoration: const InputDecoration(
-                  labelText: 'iBeacon UUID:',
+                  labelText: 'iBeacon UUID',
                   labelStyle: TextStyle(color: Colors.black),
-                  hintText: '輸入Beacon的UUID',
+                  hintText: '請輸入 Beacon 的 UUID',
                   hintStyle: TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Checkbox(
                     value: door,
+                    activeColor: Colors.teal,
                     onChanged: (bool? value) {
                       setState(() {
                         door = value ?? false;
                       });
                     },
                   ),
-                  const Text('標記為"門"'),
+                  const Text(
+                    '標記為 "門"',
+                    style: TextStyle(fontSize: 16),
+                  ),
                 ],
               ),
             ],

@@ -83,8 +83,10 @@ class _SearchingPageState extends State<SearchingPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('搜尋 ${widget.itemName}'),
+        backgroundColor: Colors.teal,
       ),
       body: Center(
+
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -98,6 +100,7 @@ class _SearchingPageState extends State<SearchingPage> {
               statusText,
               style: TextStyle(
                 fontSize: 24,
+                fontWeight: FontWeight.bold,
                 color: hasSignal ? Colors.green : Colors.red,
               ),
               textAlign: TextAlign.center,
@@ -105,7 +108,7 @@ class _SearchingPageState extends State<SearchingPage> {
             const SizedBox(height: 10),
             Text(
               '物件名稱: ${widget.itemName}\nUUID: ${widget.beaconId}',
-              style: const TextStyle(fontSize: 18, color: Colors.grey),
+              style: const TextStyle(fontSize: 18, color: Colors.grey, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
           ],
