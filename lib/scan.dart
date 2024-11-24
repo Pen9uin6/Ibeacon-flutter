@@ -7,20 +7,24 @@ import 'package:get/get.dart';
 class ScanService {
   late final StreamController<List<Map<String, dynamic>>> _beaconStreamController;
   final MissingEventService _missingEventService;
+  final Map<String, double> lastDistances = {}; // 記錄所有 Beacon 的最後距離
+  final Map<String, int> _signalLossCounters = {}; // 信號丟失計數器
+  static const int maxSignalLossCount = 3; // 最大信號丟失次數
   StreamSubscription? _scanSubscription;
   bool startMissingChecking = false;
 
   static const double doorThresholdDistance = 1.0; // 門的距離閾值(m)
 
-  ScanService(RxList<db.Beacon> sharedBeaconsList): _missingEventService = MissingEventService(sharedBeaconsList) {
+  ScanService(RxList<db.Beacon> sharedBeaconsList)
+      : _missingEventService = MissingEventService(sharedBeaconsList) {
     _beaconStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
   }
 
   Stream<List<Map<String, dynamic>>> get beaconStream => _beaconStreamController.stream;
 
-  // 掃描已註冊beacon
-  Future<void>scanRegisteredBeacons(RxList<db.Beacon> registeredBeacons, void Function() getList) async {
-    print("初始化掃描已註冊的 Beacon......");
+  Future<void> scanRegisteredBeacons(
+      RxList<db.Beacon> registeredBeacons, void Function() getList) async {
+    print("初始化掃描已註冊的 Beacon...");
     try {
       await flutterBeacon.initializeAndCheckScanning;
     } catch (e) {
@@ -28,108 +32,82 @@ class ScanService {
       return;
     }
 
-    int DistanceCheckingCounter = 0; // 距離條件計數器(防意外達成條件)
-    int UndetectCounter = 0; // 失去信號計數器(房短時間失去信號)
-    await _missingEventService.resetAllBeaconsMissingStatus(registeredBeacons);  // 重置所有已註冊 Beacon 的狀態
-    _missingEventService.updateRegisteredBeacons(registeredBeacons);     // 更新已註冊的 Beacon 列表
+    int distanceCheckingCounter = 0; // 距離條件計數器(防意外達成條件)
+    int undetectCounter = 0; // 失去信號計數器(房短時間失去信號)
+    await _missingEventService.resetAllBeaconsMissingStatus(registeredBeacons);
+    _missingEventService.updateRegisteredBeacons(registeredBeacons);
 
-    // 設置掃描區域
     final regions = <Region>[Region(identifier: 'com.beacon')];
 
-    // 開始掃描並監聽掃描結果
     _scanSubscription = flutterBeacon.ranging(regions).listen((result) {
       getList();
       _missingEventService.updateRegisteredBeacons(registeredBeacons);
       List<Map<String, dynamic>> scannedBeacons = [];
-      bool doorBeaconDetected = false;
+      bool anyDoorWithinThreshold = false; // 是否有任一門距離小於閥值
+      bool allDoorsLostSignal = true; // 是否所有門信號丟失
 
       for (var beacon in result.beacons) {
         final beaconId = beacon.proximityUUID;
-        final rssi = beacon.rssi.toDouble();
         final distance = beacon.accuracy;
 
-        if (distance > 0){
-          // 檢查該 Beacon 是否在已註冊的 Beacon 中
+        if (distance > 0) {
           final registeredBeacon = registeredBeacons.firstWhereOrNull((b) => b.uuid == beaconId);
           if (registeredBeacon != null) {
-            scannedBeacons.add({
-              'uuid': beaconId,
-              'distance': distance,
-              'rssi': rssi,
-            });
+            scannedBeacons.add({'uuid': beaconId, 'distance': distance});
 
-            // 判斷是否為 "door beacon" 並且距離小於閾值
-            if (registeredBeacon.door == 1){
-              doorBeaconDetected = true;
-              if (distance < doorThresholdDistance && !startMissingChecking) {
-                DistanceCheckingCounter++;
-                print("與door距離小於閥值, 當前次數:${DistanceCheckingCounter}");
-                if(DistanceCheckingCounter > 3){ // 距離小於閥值超過三次啟動檢查
-                  print("使用者即將出門，啟動遺失檢測");
-                  startMissingChecking = true;
-                }
+            // 更新最後距離
+            lastDistances[beaconId] = distance;
+            _signalLossCounters[beaconId] = 0; // 重置丟失計數
+
+            if (registeredBeacon.door == 1) {
+              allDoorsLostSignal = false; // 至少有一個門信號存在
+              if (distance < doorThresholdDistance) {
+                anyDoorWithinThreshold = true; // 有一個門距離小於閥值
               }
             }
           }
         }
       }
-      // 如果沒有發現 door beacon，則啟動遺失檢測（失去信號）
-      if (!doorBeaconDetected && !startMissingChecking) {
-        UndetectCounter++;
-        print("door信號丟失, 當前次數:${UndetectCounter}");
-        if(UndetectCounter > 3){ // 失去信號超過三次啟動檢查
-          print("未檢測到門的信號，啟動遺失檢測");
-          doorBeaconDetected = false;
-          startMissingChecking = true;
+
+      // 處理信號丟失的 Beacons
+      for (var beacon in registeredBeacons) {
+        if (!scannedBeacons.any((b) => b['uuid'] == beacon.uuid)) {
+          _signalLossCounters[beacon.uuid] = (_signalLossCounters[beacon.uuid] ?? 0) + 1;
+          if (_signalLossCounters[beacon.uuid]! < maxSignalLossCount) {
+            // 短暫信號丟失，使用最後距離
+            scannedBeacons.add({
+              'uuid': beacon.uuid,
+              'distance': lastDistances[beacon.uuid] ?? 0.0,
+            });
+            print("Beacon ${beacon.uuid} 短暫信號丟失，最後距離: ${lastDistances[beacon.uuid] ?? 'N/A'}");
+          }
         }
       }
-      // 發送掃描到的 Beacon 資料
-      _beaconStreamController.add(scannedBeacons);
-      // 如果啟動了遺失檢測，進行檢測
-      if (startMissingChecking) {
+
+      // 如果所有門信號丟失或任一門距離小於閥值，啟動遺失檢測
+      if (allDoorsLostSignal) {
+        undetectCounter++;
+        print("失去全部門訊號 次數:${undetectCounter}");
+      }
+      if (anyDoorWithinThreshold) {
+        distanceCheckingCounter++;
+        print("任一門距離小於閥值 次數:${distanceCheckingCounter}");
+      }
+      if (distanceCheckingCounter > 3 || undetectCounter > 3){
+        print("啟動遺失檢測");
+        startMissingChecking = true;
         _missingEventService.checkIfItemIsMissing(scannedBeacons);
       }
-    });
-  }
-
-  // 掃描全部beacon
-  Future<void> startAllscanning() async {
-    print("初始化掃描所有 Beacon...");
-    try {
-      await flutterBeacon.initializeAndCheckScanning;
-    } catch (e) {
-      print("初始化失敗: $e");
-      return;
-    }
-
-    // 設置掃描區域
-    final regions = <Region>[Region(identifier: 'com.beacon')];
-
-    // 開始掃描並監聽掃描結果
-    _scanSubscription = flutterBeacon.ranging(regions).listen((result) {
-      List<Map<String, dynamic>> scannedBeacons = [];
-      for (var beacon in result.beacons) {
-        final beaconId = beacon.proximityUUID;
-        final rssi = beacon.rssi.toDouble();
-        final distance = beacon.accuracy;
-
-        if (distance > 0) {
-          scannedBeacons.add({
-            'uuid': beaconId,
-            'distance': distance,
-            'rssi': rssi,
-          });
-        }
-      }
       _beaconStreamController.add(scannedBeacons);
     });
   }
 
-  // 停止掃描
   Future<void> stopScanning() async {
-    await _scanSubscription?.cancel(); // 正確取消訂閱
-    _scanSubscription = null; // 重置訂閱
+    await _scanSubscription?.cancel();
+    _scanSubscription = null;
     startMissingChecking = false;
+    lastDistances.clear();
+    _signalLossCounters.clear();
   }
 
   void dispose() {
