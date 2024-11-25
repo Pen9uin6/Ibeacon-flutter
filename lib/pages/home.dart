@@ -3,8 +3,6 @@ import "edit_beacon.dart";
 import 'package:test/database.dart';
 import 'package:test/background.dart';
 import 'package:test/scan.dart';
-import 'package:test/pages/daily.dart';
-import 'package:test/pages/group_page.dart';
 import 'package:test/pages/searching.dart';
 import 'package:test/requirement_state_controller.dart';
 import 'package:get/get.dart';
@@ -208,26 +206,26 @@ class _MainPageState extends State<HomePage>
                   color: Colors.teal,
                 ),
               ),
-              ListTile(
-                leading: Icon(Icons.notifications, color: Colors.teal),
-                title: const Text("日常提醒"),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => DailyPage()),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.group, color: Colors.teal),
-                title: const Text("我的群組"),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => GroupPage()),
-                  );
-                },
-              ),
+              // ListTile(
+              //   leading: Icon(Icons.notifications, color: Colors.teal),
+              //   title: const Text("日常提醒"),
+              //   onTap: () {
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(builder: (context) => DailyPage()),
+              //     );
+              //   },
+              // ),
+              // ListTile(
+              //   leading: Icon(Icons.group, color: Colors.teal),
+              //   title: const Text("我的群組"),
+              //   onTap: () {
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(builder: (context) => GroupPage()),
+              //     );
+              //   },
+              // ),
               Spacer(),
               Divider(),
               ListTile(

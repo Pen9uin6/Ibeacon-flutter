@@ -2,7 +2,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:test/database.dart' as db;
 import 'package:get/get.dart';
 import 'package:test/pages/home.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 class MissingEventService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -10,7 +9,6 @@ class MissingEventService {
   final Map<String, int> _missingCounts = {};
   List<db.Beacon> registeredBeacons = [];
   final RxList<db.Beacon> _BeaconsList;
-  final AudioPlayer player = AudioPlayer();
 
   MissingEventService(this._BeaconsList) {
     _initializeNotifications();
@@ -111,8 +109,6 @@ class MissingEventService {
 
   // 發送物品遺失通知
   Future<void> _sendMissingNotification(String beaconId, String item) async {
-    player.play(AssetSource('sound_effects/alert.wav'));
-
     await showNotification(
       id: beaconId.hashCode,
       title: '物品遺失警告',
@@ -147,6 +143,7 @@ class MissingEventService {
         importance: Importance.max,
         priority: Priority.high,
         ticker: 'ticker',
+
       ),
     );
   }
