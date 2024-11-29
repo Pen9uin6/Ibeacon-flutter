@@ -34,6 +34,11 @@ class _SearchingPageState extends State<SearchingPage>
   void initState() {
     super.initState();
 
+    _player.setSource(AssetSource('sound_effects/searching.wav')).catchError((e) {
+      print("音效預加載失敗: $e");
+    });
+    _player.setReleaseMode(ReleaseMode.stop);
+
     // 初始化動畫控制器
     _controller = AnimationController(
       duration: const Duration(seconds: 1), // 預設為 1 秒
@@ -100,8 +105,9 @@ class _SearchingPageState extends State<SearchingPage>
       _controller.duration = interval;
       _controller.repeat(reverse: true);
 
-      _soundTimer = Timer.periodic(interval, (_) {
-        _player.play(AssetSource('sound_effects/searching.wav')).catchError((e) {
+      _soundTimer = Timer.periodic(interval, (_) async{
+        await _player.stop();
+        _player.resume().catchError((e) {
           print("音效播放失敗: $e");
         });
       });
@@ -119,12 +125,12 @@ class _SearchingPageState extends State<SearchingPage>
     if (distance <= 0) return null;
     if (distance < 1) {
       return const Duration(milliseconds: 300);
-    } else if (distance < 3) {
+    } else if (1 <= distance && distance < 3) {
       return const Duration(milliseconds: 500);
-    } else if (distance < 5) {
-      return const Duration(seconds: 1);
+    } else if (3 <= distance && distance < 5) {
+      return const Duration(milliseconds: 800);
     } else {
-      return const Duration(seconds: 2);
+      return const Duration(milliseconds: 1000);
     }
   }
 
