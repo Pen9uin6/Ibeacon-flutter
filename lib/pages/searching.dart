@@ -134,6 +134,25 @@ class _SearchingPageState extends State<SearchingPage>
     }
   }
 
+  void _showFoundDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("恭喜"),
+        content: const Text("物品守護精靈~ 守護你和你的物品~"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // 關閉彈窗
+              Navigator.of(context).pop(); // 返回主畫面
+            },
+            child: const Text("確認"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final statusText = hasSignal
@@ -181,6 +200,11 @@ class _SearchingPageState extends State<SearchingPage>
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: _showFoundDialog,
+                  child: const Text("我找到了"),
                 ),
               ],
             ),
